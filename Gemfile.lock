@@ -224,6 +224,7 @@ DEPENDENCIES
   github-pages
   jekyll-feed
   jekyll-paginate
+  jekyll-redirect-from
   jekyll-remote-theme
 
 BUNDLED WITH

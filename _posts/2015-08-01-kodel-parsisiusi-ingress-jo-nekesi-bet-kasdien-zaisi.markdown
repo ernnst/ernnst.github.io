@@ -3,6 +3,7 @@ layout: post
 title: "Kodėl parsisiųsi Ingress, jo nekęsi, bet kasdien žaisi"
 date: 2016-01-21 18:00:00 +0300
 categories: gaming
+redirect_from: /kodel-parsisiusi-ingress-jo-nekesi-bet-kasdien-zaisi
 ---
 ![Ingress](/assets/images/2015/ingress_1.jpg)
 

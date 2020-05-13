@@ -3,6 +3,7 @@ layout: post
 title: "Ubuntu 14.04 Desktop Unattended Installation"
 date: 2016-01-21 18:00:00 +0300
 categories: linux ubuntu automation
+redirect_from: /ubuntu-14-04-desktop-unattended-installation
 ---
 
 ![Ubuntu Installation](/assets/images/2016/ubuntu_1.png)
