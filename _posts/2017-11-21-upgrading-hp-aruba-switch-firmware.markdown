@@ -51,15 +51,16 @@ In this example, `WB.16.02.0012` firmware uses `WB.16.03` boot ROM. It is upgrad
 Make sure that you are upgrading from supported version. Sometimes you may need to install incremented backups to keep the configuration intact.
 
 Check current flash:
+```
+HP-2920# show flash
+Image             Size (bytes) Date     Version
+----------------- ------------ -------- --------------
+Primary Image    :    14233321 01/26/17 WB.16.02.0012
+Secondary Image  :    14233321 01/26/17 WB.16.02.0012
 
-    HP-2920# show flash
-    Image             Size (bytes) Date     Version
-    ----------------- ------------ -------- --------------
-    Primary Image    :    14233321 01/26/17 WB.16.02.0012
-    Secondary Image  :    14233321 01/26/17 WB.16.02.0012
-
-    Boot ROM Version : WB.16.03
-    Default Boot     : Primary
+Boot ROM Version : WB.16.03
+Default Boot     : Primary
+```
 
 ### 4. Download the latest firmware from HP
 Open [this](https://h10145.www1.hp.com/downloads/ProductsList.aspx?smp=1) link and type in your product name to download the newest firmware image. In this example for [Aruba 2920 24G Switch](https://h10145.www1.hp.com/downloads/SoftwareReleases.aspx?ProductNumber=J9726A&lang=&cc=&prodSeriesId=) it's `WB_16_04_0009.swi`
@@ -99,19 +100,19 @@ Repeat the same commands from Step 5, using primary instead of secondary.
 ### 7. Validate the new firmware versions
 
 ```
-    HP-2920# sh flash
-    Image             Size (bytes) Date     Version
-    ----------------- ------------ -------- --------------
-    Primary Image    :    16495314 10/13/17 WB.16.04.0009        
-    Secondary Image  :    16495314 10/13/17 WB.16.04.0009       
+HP-2920# sh flash
+Image             Size (bytes) Date     Version
+----------------- ------------ -------- --------------
+Primary Image    :    16495314 10/13/17 WB.16.04.0009        
+Secondary Image  :    16495314 10/13/17 WB.16.04.0009       
 
-    Boot ROM Version
-    ----------------
-    Primary Boot ROM Version   : WB.16.03
-    Secondary Boot ROM Version : WB.16.03
+Boot ROM Version
+----------------
+Primary Boot ROM Version   : WB.16.03
+Secondary Boot ROM Version : WB.16.03
 
-    Default Boot Image   : Primary
-    Default Boot ROM     : Primary
+Default Boot Image   : Primary
+Default Boot ROM     : Primary
 ```
 
 The system has been updated to the newest version!
