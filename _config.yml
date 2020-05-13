@@ -1,16 +1,21 @@
-# Site settings
+# Site
 title: Ernestas Narmontas
-email: ernestasn@pm.me
-description: >-
-  Write an awesome description for your new site here. You can edit this
-  line in _config.yml. It will appear in your document head meta (for
-  Google search results) and in your feed.xml site description.
+description: Personal Blog
 baseurl: ""
 url: "https://ernestas.me"
-permalink: /:year/:month/:day/:title:output_ext
 
-# Build settings
+# Author
+author:
+  name: Ernestas Narmontas
+  email: ernestasn@pm.me
+  url: https://ernestas.me
+
+# Settings
+permalink: /:year/:month/:day/:title
 markdown: kramdown
-remote_theme: ernnst/plainwhite-jekyll
+paginate: 5
+remote_theme: ernnst/tale
 plugins:
   - jekyll-feed
+  - jekyll-paginate
+  - jekyll-remote-theme
