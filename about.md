@@ -1,18 +1,19 @@
 ---
-layout: page
-title: About
-permalink: /about/
+layout: post
+title: About Me
+permalink: /about
 ---
 
-This is the base Jekyll theme. You can find out more info about customizing your Jekyll theme, as well as basic Jekyll usage documentation at [jekyllrb.com](https://jekyllrb.com/)
+My name is **Ernestas**
+{: style="text-align: center;"}
 
-You can find the source code for Minima at GitHub:
-[jekyll][jekyll-organization] /
-[minima](https://github.com/jekyll/minima)
+I am the guy, which „works something with computers“, „hacks everything“ or just another classic geek.
+I am always interested in using technology to make something interesting or just have fun playing with it.
+{: style="text-align: center;"}
 
-You can find the source code for Jekyll at GitHub:
-[jekyll][jekyll-organization] /
-[jekyll](https://github.com/jekyll/jekyll)
+Here I am sharing experiences about personal and work projects.
+Topics may include system and network administration, system engineering, programming and other IT related stuff.
+{: style="text-align: center;"}
 
-
-[jekyll-organization]: https://github.com/jekyll
+Follow me on <a href="https://twitter.com/ernnst7" target="_blank">Twitter</a> and <a href="https://github.com/ernnst" target="_blank">GitHub</a> for more updates.
+{: style="text-align: center;"}
