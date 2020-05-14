@@ -19,3 +19,4 @@ plugins:
   - jekyll-feed
   - jekyll-paginate
   - jekyll-remote-theme
+disqus: gyklt
