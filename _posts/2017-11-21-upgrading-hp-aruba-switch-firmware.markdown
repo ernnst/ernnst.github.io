@@ -4,6 +4,7 @@ title: "Upgrading HP Aruba Switch Firmware"
 date: 2017-11-21 18:00:00 +0300
 categories: networking hardware
 redirect_from: /upgrading-hp-aruba-switch-firmware
+comments: true
 ---
 ![HP Aruba](/assets/images/2017/aruba_1.jpg)
 
