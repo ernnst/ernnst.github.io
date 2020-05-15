@@ -19,5 +19,6 @@ plugins:
   - jekyll-feed
   - jekyll-paginate
   - jekyll-remote-theme
+  - jekyll-redirect-from
 disqus: gyklt
 google_analytics: UA-59118080-2

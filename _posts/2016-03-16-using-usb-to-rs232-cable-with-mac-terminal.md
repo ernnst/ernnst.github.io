@@ -3,7 +3,7 @@ layout: post
 title: "Using USB to RS232 Cable with Mac Terminal"
 date: 2016-01-21 18:00:00 +0300
 categories: hardware
-redirect_from: /using-usb-to-rs232-cable-with-mac-terminal
+redirect_from: /using-usb-to-rs232-cable-with-mac-terminal/
 comments: true
 ---
 ![USB to RS232](/assets/images/2016/usb-to-rs232_1.jpg)
