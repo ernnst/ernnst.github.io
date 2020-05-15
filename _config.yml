@@ -20,3 +20,4 @@ plugins:
   - jekyll-paginate
   - jekyll-remote-theme
 disqus: gyklt
+google_analytics: UA-59118080-2
