@@ -2,6 +2,10 @@
 layout: post
 title: About Me
 permalink: /about
+redirect_from:
+  - /apie
+  - /apie/
+  - /about/
 ---
 
 My name is **Ernestas**
