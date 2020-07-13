@@ -3,6 +3,7 @@ layout: post
 title: "GitHub Uptime and Microsoft"
 date: 2020-07-13 12:01:00 +0300
 categories: github git
+comments: true
 ---
 
 Recently GitHub reliability has been getting worse. It's 2020 July 13, Monday and GitHub wasn't working for around 2 hours. Take a look at their [status page](https://www.githubstatus.com). You'll see something like the screenshot below, taken at 2020-07-13 07:33 UTC.
@@ -11,7 +12,7 @@ Recently GitHub reliability has been getting worse. It's 2020 July 13, Monday an
 
 Millions of individuals and businesses rely on GitHub daily. Having that in mind, I am surprised how GitHub allows such a generous error budget for themselves. For example in April 2020 it went down to **99.67%**.
 
-After exploring their [historic status page data](https://www.githubstatus.com/uptime) I noticed one interesting pattern. GitHub started having uptime issues around November 2018. Only a month after Microsoft [announced](https://blogs.microsoft.com/blog/2018/10/26/microsoft-completes-github-acquisition) their acquisition was complete. Whether it's coincidence or consequence, you decide.
+After exploring their [historic status page data](https://www.githubstatus.com/uptime) I noticed one interesting pattern. Since 2014, GitHub had their first outage in November 2018, only a month after Microsoft [announced](https://blogs.microsoft.com/blog/2018/10/26/microsoft-completes-github-acquisition) their acquisition was complete. More often and serious incidents started in 2019 December. Whether it's coincidence or consequence, you decide.
 
 Take a look at historic uptime for Git Operations.
 
@@ -65,7 +66,7 @@ Take a look at historic uptime for Git Operations.
 ##### 2020 May - 2020 July
 ![2020 May - 2020 July](/assets/images/2020/github-2020-05.jpg)
 
-It's not only Git Operations, but other services too. Explore their [uptime page](https://www.githubstatus.com/uptime) and you'll see similar pattern for other services. API Requests, Webhooks, Issues, Pull Requests, Projects were having downtimes even more often than Git Operations.
+It's not only Git Operations, but other services too. Explore their [uptime page](https://www.githubstatus.com/uptime) and you'll see similar pattern. API Requests, Web-hooks, Issues, Pull Requests, Projects were having downtimes even more often than Git Operations.
 
 Let's hope it's temporary and GitHub error 500 won't become their own version of Blue Screen of Death. In this case it would be Green Screen of Death (GSoD or GhSoD).
 
