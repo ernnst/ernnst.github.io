@@ -7,7 +7,9 @@ redirect_from:
   - /kodel-parsisiusi-ingress-jo-nekesi-bet-kasdien-zaisi/
   - /kodel-parsisiusi-ingress-jo-nekesi-bet-kasdien-zaisi
 comments: true
+hidden: true
 ---
+
 ![Ingress](/assets/images/2015/ingress_1.jpg)
 
 Prieš mažiau nei pusmetį mano kolega, vaikščiojantis paniręs į savo iPad'ą aplink fontanus, skulptūras, pastatus ar kitus lankytinus objektus man atrodė kaip keistuolis. Ko ten vaikščioti jei net galvos nepakeli nuo ekrano? Kai to paties jo paklausiau, sužinojau kaip žaidžiamas Ingress.

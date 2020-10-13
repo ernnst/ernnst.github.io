@@ -7,7 +7,9 @@ redirect_from:
   - /upgrading-hp-aruba-switch-firmware/
   - /upgrading-hp-aruba-switch-firmware
 comments: true
+hidden: true
 ---
+
 ![HP Aruba](/assets/images/2017/aruba_1.jpg)
 
 Guide for upgrading HP Aruba (formerly ProCurve) switch firmware.

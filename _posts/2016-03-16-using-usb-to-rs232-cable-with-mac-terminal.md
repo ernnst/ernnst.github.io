@@ -7,7 +7,9 @@ redirect_from:
   - /using-usb-to-rs232-cable-with-mac-terminal/
   - /using-usb-to-rs232-cable-with-mac-terminal
 comments: true
+hidden: true
 ---
+
 ![USB to RS232](/assets/images/2016/usb-to-rs232_1.jpg)
 
 I don't think there is a modern laptop that has serial ports, but many networking devices still use them for local connection. It happens rarely, but I need to use console port from time to time. I knew how to use the adapter on Windows systems, but on OS X it's a little different. Here's the process:

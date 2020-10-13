@@ -2,10 +2,9 @@
 layout: post
 title: About Me
 permalink: /about
+author_hidden: true
 redirect_from:
   - /apie
-  - /apie/
-  - /about/
 ---
 
 My name is Ernestas.
