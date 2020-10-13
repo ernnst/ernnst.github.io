@@ -10,3 +10,7 @@ group :jekyll_plugins do
   gem "jekyll-redirect-from"
   gem "jekyll_github_sample"
 end
+
+group :development do
+  gem "jgd"
+end
