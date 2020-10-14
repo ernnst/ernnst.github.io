@@ -22,3 +22,9 @@ plugins:
   - jekyll-redirect-from
 disqus: gyklt
 google_analytics: UA-59118080-2
+
+exclude:
+  - README.md
+  - LICENSE.txt
+  - Gemfile.lock
+  - Gemfile
