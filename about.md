@@ -19,5 +19,5 @@ Currently I am working as Site Reliability Engineer at [Vinted](https://vinted.c
 In this blog, I am sharing my opinion and experiences about personal and work projects.
 {: style="text-align: center;"}
 
-Follow me on <a href="https://twitter.com/ernnst7" target="_blank">Twitter</a> and <a href="https://github.com/ernnst" target="_blank">GitHub</a> for more updates.
+Follow me on <a href="https://twitter.com/ernnstn" target="_blank">Twitter</a> and <a href="https://github.com/ernnst" target="_blank">GitHub</a> for more updates.
 {: style="text-align: center;"}
