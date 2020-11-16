@@ -7,8 +7,8 @@ bundle exec jekyll serve
 ```
 
 ### Publish
-1. Commit changes and push `master`
-1. Build and push to GitHub:
-```
-bundle exec jgd
-```
+1. Commit changes to `master` and push to GitHub
+1. Build and publish to `gh-pages` branch:
+   ```
+   bundle exec jgd
+   ```
