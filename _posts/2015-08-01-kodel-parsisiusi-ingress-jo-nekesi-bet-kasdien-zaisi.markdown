@@ -2,7 +2,7 @@
 layout: post
 title: "Kodėl parsisiųsi Ingress, jo nekęsi, bet kasdien žaisi"
 date: 2016-01-21 18:00:00 +0300
-categories: gaming
+tags: gaming
 redirect_from:
   - /kodel-parsisiusi-ingress-jo-nekesi-bet-kasdien-zaisi/
   - /kodel-parsisiusi-ingress-jo-nekesi-bet-kasdien-zaisi

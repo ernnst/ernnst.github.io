@@ -2,7 +2,7 @@
 layout: post
 title: "GitHub Uptime and Microsoft"
 date: 2020-07-13 12:01:00 +0300
-categories: github git
+tags: github git
 comments: true
 ---
 
