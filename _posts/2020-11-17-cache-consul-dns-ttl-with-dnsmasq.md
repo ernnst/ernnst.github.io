@@ -2,7 +2,7 @@
 layout: post
 title: "Cache Consul DNS TTL With Dnsmasq"
 date: 2020-11-17
-tags: hashicorp consul dnsmasq dns
+tags: hashicorp consul dnsmasq dns devto
 comments: true
 ---
 While testing [Consul DNS caching](https://learn.hashicorp.com/tutorials/consul/dns-caching),

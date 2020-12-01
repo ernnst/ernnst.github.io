@@ -28,3 +28,8 @@ exclude:
   - LICENSE.txt
   - Gemfile.lock
   - Gemfile
+
+feed:
+  tags:
+    only:
+      - devto
