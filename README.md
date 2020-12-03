@@ -10,5 +10,5 @@ bundle exec jekyll serve
 1. Commit changes to `master` and push to GitHub
 1. Build and publish to `gh-pages` branch:
    ```
-   bundle exec jgd
+   JEKYLL_ENV=production bundle exec jgd
    ```
