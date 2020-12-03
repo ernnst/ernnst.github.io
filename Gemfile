@@ -10,6 +10,7 @@ group :jekyll_plugins do
   gem 'jekyll-redirect-from'
   gem 'jekyll_github_sample'
   gem 'jekyll-twitter-plugin'
+  gem 'jekyll-analytics'
 end
 
 gem 'jgd'

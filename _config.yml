@@ -22,8 +22,12 @@ plugins:
   - jekyll-redirect-from
   - jekyll_github_sample
   - jekyll-twitter-plugin
+  - jekyll-analytics
 disqus: gyklt
-google_analytics: UA-59118080-2
+
+jekyll_analytics:
+  GoogleAnalytics:
+    id: UA-59118080-2
 
 exclude:
   - README.md
