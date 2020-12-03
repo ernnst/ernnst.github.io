@@ -9,6 +9,7 @@ group :jekyll_plugins do
   gem 'jekyll-feed'
   gem 'jekyll-redirect-from'
   gem 'jekyll_github_sample'
+  gem 'jekyll-twitter-plugin'
 end
 
 gem 'jgd'
