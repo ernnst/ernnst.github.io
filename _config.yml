@@ -14,7 +14,7 @@ author:
 permalink: /:year/:month/:day/:title
 markdown: kramdown
 paginate: 5
-remote_theme: ernnst/tale
+remote_theme: enarmontas/tale
 plugins:
   - jekyll-feed
   - jekyll-paginate
