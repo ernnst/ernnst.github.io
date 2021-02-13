@@ -6,7 +6,7 @@ tags: hardware
 redirect_from:
   - /using-usb-to-rs232-cable-with-mac-terminal/
   - /using-usb-to-rs232-cable-with-mac-terminal
-comments: true
+comments: false
 hidden: true
 ---
 

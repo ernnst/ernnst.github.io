@@ -6,7 +6,7 @@ tags: networking hardware
 redirect_from:
   - /upgrading-hp-aruba-switch-firmware/
   - /upgrading-hp-aruba-switch-firmware
-comments: true
+comments: false
 hidden: true
 ---
 

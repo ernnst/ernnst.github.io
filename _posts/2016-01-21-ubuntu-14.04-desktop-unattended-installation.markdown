@@ -6,7 +6,7 @@ tags: linux ubuntu automation
 redirect_from:
   - /ubuntu-14-04-desktop-unattended-installation/
   - /ubuntu-14-04-desktop-unattended-installation
-comments: true
+comments: false
 hidden: true
 ---
 
