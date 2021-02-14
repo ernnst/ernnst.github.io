@@ -19,5 +19,4 @@ Currently I am working as Site Reliability Engineer at [Vinted](https://vinted.c
 In this blog, I am sharing my opinion and experiences about personal and work projects.
 {: style="text-align: center;"}
 
-Follow me on <a href="https://twitter.com/narmontase" target="_blank">Twitter</a> and <a href="https://github.com/enarmontas" target="_blank">GitHub</a> for more updates.
-{: style="text-align: center;"}
+Follow me on <a href="https://twitter.com/{{ site.author.twitter }}" target="_blank">Twitter</a> and <a href="https://github.com/{{ site.author.github }}" target="_blank">GitHub</a> for more updates.
