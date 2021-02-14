@@ -8,15 +8,11 @@ redirect_from:
 ---
 
 My name is Ernestas.
-{: style="text-align: center;"}
 
-I love technology, automating things, building scalable and reliable systems. I am driven by that feeling when "it just works" after hitting the return key.
-{: style="text-align: center;"}
+I work as Site Reliability Engineer at [Vinted](https://vinted.com) where I solve infrastructure problems with code.
 
-Currently I am working as Site Reliability Engineer at [Vinted](https://vinted.com), previously worked as System Administrator at [Wix](https://wix.com).
-{: style="text-align: center;"}
+Before that, I worked as System Administrator at [Wix](https://vinted.com) and Network Administrator at [VMU](https://www.vdu.lt/en).
 
-In this blog, I am sharing my opinion and experiences about personal and work projects.
-{: style="text-align: center;"}
+In this blog, I am sharing my opinion and knowledge about personal and work projects. The main goal is to document my learnings and mistakes so others can benefit from them.
 
 Follow me on <a href="https://twitter.com/{{ site.author.twitter }}" target="_blank">Twitter</a> and <a href="https://github.com/{{ site.author.github }}" target="_blank">GitHub</a> for more updates.
