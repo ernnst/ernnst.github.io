@@ -7,7 +7,7 @@ redirect_from:
   - /upgrading-hp-aruba-switch-firmware/
   - /upgrading-hp-aruba-switch-firmware
 comments: false
-hidden: true
+hidden: false
 ---
 
 ![HP Aruba](/assets/images/2017/aruba_1.jpg)

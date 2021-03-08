@@ -7,7 +7,7 @@ redirect_from:
   - /kodel-parsisiusi-ingress-jo-nekesi-bet-kasdien-zaisi/
   - /kodel-parsisiusi-ingress-jo-nekesi-bet-kasdien-zaisi
 comments: false
-hidden: true
+hidden: false
 ---
 
 ![Ingress](/assets/images/2015/ingress_1.jpg)
