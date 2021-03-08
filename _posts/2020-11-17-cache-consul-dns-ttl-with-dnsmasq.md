@@ -140,7 +140,9 @@ Configure dummy [recursor](https://www.consul.io/docs/agent/options.html#recurso
 Edit `/etc/consul/consul.json` and add `recursors` entry with dead address (in your environment):
 
 ```json
-"recursors": [ "127.0.0.2" ]
+{
+  "recursors": [ "127.0.0.2" ]
+}
 ```
 
 After `consul reload` Dnsmasq should cache responses from `.consul` domain.
@@ -165,10 +167,16 @@ Nov 16 20:49:04 dnsmasq[22925]: cached google.com is 216.58.206.78
 Nov 16 21:53:49 dnsmasq[22925]: cached test.service.consul is 10.135.174.59
 Nov 16 21:53:49 dnsmasq[22925]: cached test.service.consul is 10.135.205.232
 ```
+---
+**Note**
 
-### Ending Notes
-It sounds awful to fake something in production.
-There is an [issue](https://github.com/hashicorp/consul/issues/8752) created in `hashicorp/consul`
-repository, but it doesn't have any responses (as of 2020-11-17).\
-Another option is to contribute to Consul source code and fix this issue properly
-or just address it in documentation.
+If any of your servers will send a request to Consul DNS server for non `.consul` domain, Consul will try to forward it to non existing recursor. By default, it will time out in 2s, but you can adjust that setting with `recursor_timeout` option and set to lower value.
+
+```json
+{
+  "dns_config": {
+    "recursor_timeout": "1ms"
+  }
+}
+```
+---
