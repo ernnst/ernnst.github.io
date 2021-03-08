@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Hello, World! (v.2.0.0)"
-date: 2020-07-09 21:01:00 +0300
+date: 2020-07-09
 tags: blog
 comments: false
 ---
