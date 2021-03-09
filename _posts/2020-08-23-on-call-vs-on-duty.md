@@ -2,7 +2,7 @@
 layout: post
 title: "On Call vs. On-Duty"
 date: 2020-08-23
-tags: oncall onduty devops sre devto
+tags: oncall onduty devops sre
 comments: false
 ---
 What is the difference between on-call and on-duty for a system administrator?

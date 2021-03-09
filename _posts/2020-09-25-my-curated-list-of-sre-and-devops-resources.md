@@ -2,7 +2,7 @@
 layout: post
 title: "My Curated List of SRE and DevOps Resources"
 date: 2020-09-25
-tags: devops sre devto
+tags: devops sre
 comments: false
 ---
 I am curating SRE and DevOps resources for those who want to get into the field.
