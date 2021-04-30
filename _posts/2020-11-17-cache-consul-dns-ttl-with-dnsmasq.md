@@ -3,7 +3,7 @@ layout: post
 title: "Cache Consul DNS TTL With Dnsmasq"
 date: 2020-11-17
 tags: hashicorp consul dnsmasq dns
-comments: false
+comments: true
 ---
 While testing [Consul DNS caching](https://learn.hashicorp.com/tutorials/consul/dns-caching),
 I have noticed that Dnsmasq does not cache Consul responses. If you are also using
