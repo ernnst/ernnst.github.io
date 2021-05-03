@@ -11,7 +11,7 @@ My name is Ernestas.
 
 I work as Site Reliability Engineer at [Vinted](https://vinted.com) where I solve infrastructure problems with code.
 
-Before that, I worked as System Administrator at [Wix](https://vinted.com) and Network Administrator at [VMU](https://www.vdu.lt/en).
+Before that, I worked as System Administrator at [Wix](https://wix.com) and Network Administrator at [VMU](https://www.vdu.lt/en).
 
 In this blog, I am sharing my opinion and knowledge about personal and work projects. The main goal is to document my learnings and mistakes so others can benefit from them.
 
