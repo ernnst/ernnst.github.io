@@ -7,6 +7,7 @@ redirect_from:
   - /using-usb-to-rs232-cable-with-mac-terminal/
   - /using-usb-to-rs232-cable-with-mac-terminal
 comments: true
+twitter: true
 hidden: false
 ---
 

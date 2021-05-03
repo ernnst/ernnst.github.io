@@ -4,6 +4,7 @@ title: "GitHub Uptime and Microsoft"
 date: 2020-07-13
 tags: github git
 comments: true
+twitter: true
 ---
 
 Recently GitHub reliability has been getting worse. It's 2020 July 13, Monday and GitHub wasn't working for around 2 hours. Take a look at their [status page](https://www.githubstatus.com). You'll see something like the screenshot below, taken at 2020-07-13 07:33 UTC.

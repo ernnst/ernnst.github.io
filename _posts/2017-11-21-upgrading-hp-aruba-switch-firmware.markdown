@@ -7,6 +7,7 @@ redirect_from:
   - /upgrading-hp-aruba-switch-firmware/
   - /upgrading-hp-aruba-switch-firmware
 comments: true
+twitter: true
 hidden: false
 ---
 

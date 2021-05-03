@@ -4,6 +4,7 @@ title: "Cache Consul DNS TTL With Dnsmasq"
 date: 2020-11-17
 tags: hashicorp consul dnsmasq dns
 comments: true
+twitter: true
 ---
 While testing [Consul DNS caching](https://learn.hashicorp.com/tutorials/consul/dns-caching),
 I have noticed that Dnsmasq does not cache Consul responses. If you are also using
@@ -179,4 +180,3 @@ If any of your servers will send a request to Consul DNS server for non `.consul
   }
 }
 ```
----
