@@ -9,8 +9,8 @@ comments:
       type: date
       options:
         format: "timestamp-seconds"
-  moderation: true
   name: "Ernestas.me"
+  moderation: false
   # notifications:
   #   enabled: true
   #   apiKey: "1q2w3e4r"
