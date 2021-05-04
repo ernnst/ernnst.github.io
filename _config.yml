@@ -36,11 +36,6 @@ exclude:
   - Gemfile.lock
   - Gemfile
 
-feed:
-  tags:
-    only:
-      - devto
-
 staticman_url: https://ernestas-me-staticman.herokuapp.com/v2/entry/enarmontas/enarmontas.github.io/master/comments
 reCaptcha:
   siteKey: 6LfbfUsaAAAAAGjuUw-KsmEs2JKV8t3KlTQ5LyII
