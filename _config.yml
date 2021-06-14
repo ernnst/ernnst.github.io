@@ -15,16 +15,23 @@ author:
 # Settings
 permalink: /:year/:month/:day/:title
 markdown: kramdown
+include:
+  - _pages
+
 paginate: 5
-remote_theme: enarmontas/tale
+
+sass:
+  sass_dir:     _sass
+  style:        compressed
+
 plugins:
   - jekyll-feed
   - jekyll-paginate
-  - jekyll-remote-theme
   - jekyll-redirect-from
   - jekyll_github_sample
   - jekyll-twitter-plugin
   - jekyll-analytics
+  - jekyll-seo-tag
 
 jekyll_analytics:
   GoogleAnalytics:

@@ -270,7 +270,6 @@ DEPENDENCIES
   jekyll-feed
   jekyll-paginate
   jekyll-redirect-from
-  jekyll-remote-theme
   jekyll-twitter-plugin
   jekyll_github_sample
   jgd

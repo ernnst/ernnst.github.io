@@ -1,0 +1,45 @@
+---
+layout: default
+---
+
+<div class="post">
+  <div class="post-info">
+    {% unless page.author_hidden %}
+    <span>Written by</span>
+    {% if page.author %}
+        {{ page.author }}
+    {% else %}
+        {{ site.author.name }}
+    {% endif %}
+    {% endunless %}
+
+    {% if page.date %}
+      <br>
+      <span>on&nbsp;</span><time datetime="{{ page.date }}">{{ page.date | date: "%B %d, %Y" }}</time>
+    {% endif %}
+  </div>
+
+  <h1 class="post-title">{{ page.title }}</h1>
+  <div class="post-line"></div>
+
+  {{ content }}
+
+  {% if site.author.twitter and page.twitter %}
+    <p>If you liked this article please follow me on <a href="{{ 'https://twitter.com/' | append: site.author.twitter }}">Twitter</a> for similar content.</p>
+  {% endif %}
+</div>
+
+{% if page.comments %}
+  {% include static_comments.html %}
+{% endif %}
+
+<div class="pagination">
+  {% if page.next.url %}
+    <a href="{{ page.next.url | prepend: site.baseurl }}" class="left arrow">&#8592;</a>
+  {% endif %}
+  {% if page.previous.url %}
+    <a href="{{ page.previous.url | prepend: site.baseurl }}" class="right arrow">&#8594;</a>
+  {% endif %}
+
+  <a href="#" class="top">Top</a>
+</div>
