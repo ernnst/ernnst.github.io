@@ -5,11 +5,14 @@ date: 2017-02-12
 tags: linux ubuntu automation
 comments: true
 twitter: true
+redirect_from:
+  - /ubuntu-16-04-desktop-unattended-installation
+  - /2017/02/12/ubuntu-16.04-desktop-unattended-installation
 ---
 
 ![Ubuntu Installation](/assets/images/2017/ubuntu_1.jpg)
 
-I previously wrote a [tutorial](/2016/01/21/ubuntu-14.04-desktop-unattended-installation.html) on how to automate Ubuntu Desktop 14.04 LTS installation, but for 16.04 it didn't work because of some differences in installation media.
+I previously wrote a [tutorial](/2016/01/21/ubuntu-14.04-desktop-unattended-installation) on how to automate Ubuntu Desktop 14.04 LTS installation, but for 16.04 it didn't work because of some differences in installation media.
 
 Here's a full and tested solution to create your unattended Ubuntu installation media. For me the process on VirtualBox guest took about 30 minutes to fully boot into working system without even touching the keyboard.
 

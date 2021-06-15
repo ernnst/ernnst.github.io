@@ -5,6 +5,9 @@ date: 2016-01-21
 tags: linux ubuntu automation
 comments: true
 twitter: true
+redirect_from:
+  - /ubuntu-14-04-desktop-unattended-installation
+  - /2016/01/21/ubuntu-14.04-desktop-unattended-installation
 ---
 
 ![Ubuntu Installation](/assets/images/2016/ubuntu_1.png)
