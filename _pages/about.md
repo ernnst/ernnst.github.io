@@ -1,15 +1,18 @@
 ---
 layout: post
-title: "About"
-author: "Chester"
-permalink: /about/
+title: About Me
+permalink: /about
+author_hidden: true
+redirect_from:
+  - /apie
 ---
 
-A friend of mine writes short stories. One sunny day, I asked if he wanted a website to showcase his works and he agreed. I decided to use GitHub Pages to host his site. That way he wouldn't have to buy a domain and a server.
+My name is Ernestas.
 
-While doing some research up on GitHub Pages, I accidentally chanced upon this _simple, blog-aware, static site generator_ called [Jekyll](https://jekyllrb.com/) which works really well with GitHub Pages. I figured it would do just fine for my friend and I set about searching for a pretty theme. I wanted a theme with a _book-ish_ vibe. Unfortunately, most of the themes were too modern. Eventually, I caved and begun working on my own theme. With the help of [Poole](https://github.com/poole/poole), the Jekyll Butler, I was able to build **Tale**.
+I work as Site Reliability Engineer at [Vinted](https://vinted.com) where I solve infrastructure problems with code.
 
-## Contribute
-Feel free to create an issue or make a pull request on [GitHub](https://github.com/chesterhow/tale).
+Before that, I worked as System Administrator at [Wix](https://wix.com) and Network Administrator at [VMU](https://www.vdu.lt/en).
 
-Thanks for reading!
+In this blog, I am sharing my opinion and knowledge about personal and work projects. The main goal is to document my learnings and mistakes so others can benefit from them.
+
+Follow me on <a href="https://twitter.com/{{ site.author.twitter }}" target="_blank">Twitter</a> and <a href="https://github.com/{{ site.author.github }}" target="_blank">GitHub</a> for more updates.
