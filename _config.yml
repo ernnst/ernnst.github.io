@@ -42,6 +42,7 @@ exclude:
   - LICENSE.txt
   - Gemfile.lock
   - Gemfile
+  - vendor
 
 staticman_url: https://ernestas-me-staticman.herokuapp.com/v2/entry/enarmontas/enarmontas.github.io/master/comments
 reCaptcha:
