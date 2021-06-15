@@ -11,5 +11,3 @@ group :jekyll_plugins do
   gem 'jekyll-twitter-plugin'
   gem 'jekyll-analytics'
 end
-
-gem 'jgd'
