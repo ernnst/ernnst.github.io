@@ -13,7 +13,7 @@ author:
   github: enarmontas
 
 # Settings
-permalink: /:year/:month/:day/:title
+permalink: /:year/:month/:day/:slug
 markdown: kramdown
 include:
   - _pages
