@@ -1,0 +1,799 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://ernestas.me/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ernestas.me/" rel="alternate" type="text/html" /><updated>2021-07-13T11:03:50+00:00</updated><id>https://ernestas.me/feed.xml</id><title type="html">Ernestas Narmontas</title><subtitle>Personal Blog</subtitle><author><name>Ernestas Narmontas</name><email>ernestasn@pm.me</email></author><entry><title type="html">Storing Terraform State in Consul</title><link href="https://ernestas.me/2021/05/03/storing-terraform-state-in-consul" rel="alternate" type="text/html" title="Storing Terraform State in Consul" /><published>2021-05-03T00:00:00+00:00</published><updated>2021-05-03T00:00:00+00:00</updated><id>https://ernestas.me/2021/05/03/storing-terraform-state-in-consul</id><content type="html" xml:base="https://ernestas.me/2021/05/03/storing-terraform-state-in-consul">&lt;p&gt;I was impressed that Terraform performs better with Consul backend instead of S3/DynamoDB.&lt;/p&gt;
+
+&lt;p&gt;HashiCorp products integrate seamlessly with each other, so storing Terraform state in a
+Consul cluster is very easy. Just  create a policy, token and define the Terraform backend.&lt;/p&gt;
+
+&lt;p&gt;Here are the steps.&lt;/p&gt;
+
+&lt;h3 id=&quot;create-consul-policy&quot;&gt;Create Consul Policy&lt;/h3&gt;
+
+&lt;p&gt;Example &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;policy.json&lt;/code&gt;:&lt;/p&gt;
+
+&lt;div class=&quot;language-json highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;Name&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;terraform-state&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;Description&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;Grants required permissions to store Terraform state&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;Rules&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;session_prefix &lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;\&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt; { policy = &lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;write&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;}, key_prefix &lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;terraform-state/&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt; { policy = &lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;write&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;}&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;Datacenters&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+    &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;dc1&quot;&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Note: Key prefix is target location in Consul.
+Session prefix is required for locking Terraform state in Consul.&lt;/p&gt;
+
+&lt;p&gt;Create example policy:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;curl &lt;span class=&quot;nt&quot;&gt;-X&lt;/span&gt; PUT &lt;span class=&quot;nt&quot;&gt;--data&lt;/span&gt; @policy.json &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;-H&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;X-Consul-Token: &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$CONSUL_HTTP_TOKEN&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt; http://127.0.0.1:8500/v1/acl/policy
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;create-consul-token&quot;&gt;Create Consul Token&lt;/h3&gt;
+
+&lt;p&gt;Example &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;token.json&lt;/code&gt; with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;terraform-state&lt;/code&gt; policy assigned.&lt;/p&gt;
+
+&lt;div class=&quot;language-json highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;Description&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;Token for Terraform&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;Policies&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+    &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+      &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;Name&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;terraform-state&quot;&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+    &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;Local&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Create example token:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;curl &lt;span class=&quot;nt&quot;&gt;-X&lt;/span&gt; PUT &lt;span class=&quot;nt&quot;&gt;--data&lt;/span&gt; @token.json &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;-H&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;X-Consul-Token: &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$CONSUL_HTTP_TOKEN&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt; http://127.0.0.1:8500/v1/acl/token
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Set the resulting &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;secret_id&lt;/code&gt; as &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;CONSUL_HTTP_TOKEN&lt;/code&gt; environment variable on the machine
+where Terraform runs.&lt;/p&gt;
+
+&lt;h3 id=&quot;configure-terraform-backend&quot;&gt;Configure Terraform Backend&lt;/h3&gt;
+
+&lt;p&gt;Example &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;backend.tf&lt;/code&gt; with custom path for your module:&lt;/p&gt;
+
+&lt;div class=&quot;language-hcl highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nx&quot;&gt;terraform&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;backend&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;consul&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;address&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;consul.service.consul:8500&quot;&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;lock&lt;/span&gt;    &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;path&lt;/span&gt;    &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;terraform-state/example/terraform.tfstate&quot;&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;scheme&lt;/span&gt;  &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;http&quot;&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;That should do the job!&lt;/p&gt;</content><author><name>Ernestas Narmontas</name><email>ernestasn@pm.me</email></author><category term="terraform" /><category term="consul" /><summary type="html">I was impressed that Terraform performs better with Consul backend instead of S3/DynamoDB.</summary></entry><entry><title type="html">Static Comments for Jekyll with GitHub Pages</title><link href="https://ernestas.me/2021/04/30/staticman" rel="alternate" type="text/html" title="Static Comments for Jekyll with GitHub Pages" /><published>2021-04-30T00:00:00+00:00</published><updated>2021-04-30T00:00:00+00:00</updated><id>https://ernestas.me/2021/04/30/staticman</id><content type="html" xml:base="https://ernestas.me/2021/04/30/staticman">&lt;p&gt;Disqus is the most popular comment solution for Jekyll at the moment, but it has one huge problem. It sucks. It’s free proprietary software filled with tracking scripts that slow down your website.&lt;/p&gt;
+
+&lt;p&gt;Since Jekyll sites are static there was no way to store comments without such external service or database. Well, at least until &lt;a href=&quot;https://staticman.net/&quot;&gt;Staticman&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Staticman is an open source static comment solution for your Jekyll site. It allows you to have user-generated content on a static website.&lt;/p&gt;
+
+&lt;p&gt;I just have finished setting it up on this blog. I have used &lt;a href=&quot;https://travisdowns.github.io/blog/2020/02/05/now-with-comments.html&quot;&gt;this amazing guide&lt;/a&gt; by Travis Downs. I’m really happy how it works.
+Here’s a quick summary:&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Staticman can be hosted on any platform with NodeJS. I am using free Heroku app, but there are many other options. More details &lt;a href=&quot;https://staticman.net/docs/index.html&quot;&gt;here&lt;/a&gt;.&lt;/li&gt;
+  &lt;li&gt;Jekyll theme will need a simple HTML form that will post comments to Staticman API. I have borrowed most of HTML/CSS/JS from the &lt;a href=&quot;https://travisdowns.github.io/blog/2020/02/05/now-with-comments.html&quot;&gt;guide&lt;/a&gt; I mentioned earlier.&lt;/li&gt;
+  &lt;li&gt;Staticman will create a &lt;a href=&quot;https://github.com/enarmontas/enarmontas.github.io/pull/9&quot;&gt;pull request&lt;/a&gt; with the comment data. It can also commit directly without approval. Note: GitHub access token is required.&lt;/li&gt;
+  &lt;li&gt;You’ll approve the comment and merge the pull request.&lt;/li&gt;
+  &lt;li&gt;GitHub Pages (or your custom solution) will build your Jekyll site with the new commit.&lt;/li&gt;
+  &lt;li&gt;Comment will appear on your website.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;That’s it. When you get it up and running, it works. Try it below.&lt;/p&gt;</content><author><name>Ernestas Narmontas</name><email>ernestasn@pm.me</email></author><category term="jekyll" /><category term="staticman" /><category term="github" /><category term="githubpages" /><summary type="html">Disqus is the most popular comment solution for Jekyll at the moment, but it has one huge problem. It sucks. It’s free proprietary software filled with tracking scripts that slow down your website.</summary></entry><entry><title type="html">Function Over Form: Mounting External SSD On MacBook</title><link href="https://ernestas.me/2021/03/08/function-over-form-mounting-external-ssd-on-macbook" rel="alternate" type="text/html" title="Function Over Form: Mounting External SSD On MacBook" /><published>2021-03-08T00:00:00+00:00</published><updated>2021-03-08T00:00:00+00:00</updated><id>https://ernestas.me/2021/03/08/function-over-form-mounting-external-ssd-on-macbook</id><content type="html" xml:base="https://ernestas.me/2021/03/08/function-over-form-mounting-external-ssd-on-macbook">&lt;p&gt;Here is an awesome MacGyver&lt;sup id=&quot;fnref:1&quot; role=&quot;doc-noteref&quot;&gt;&lt;a href=&quot;#fn:1&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt; solution for expanding MacBook storage.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/2021/macbook-ssd-1.jpg&quot; alt=&quot;MacBook Pro with External SSD&quot; /&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;problem&quot;&gt;Problem&lt;/h3&gt;
+&lt;p&gt;I use Lightroom CC for editing my photos, so I need to have them on my computer during editing. Currently, my library consists of 20K RAW photos, which takes 350GB of storage. My MacBook Pro comes with 256GB internal SSD, so it can’t store my library.&lt;/p&gt;
+
+&lt;p&gt;Lightroom doesn’t perform well with NAS storage, cloud sync is slow and causes high CPU usage, cached image previews are also not enough for me. Since Apple sell their MacBooks with soldered storage devices, there is no option to expand the storage. The only reasonable solution is external SSD drive.&lt;/p&gt;
+
+&lt;p&gt;Carrying the laptop with external drive connected around the house is a challenge. I want to move my laptop across different surfaces without disconnecting the external drive. When I am working on a couch, there is no place to store the drive safely. It also gets disconnected easily.&lt;/p&gt;
+
+&lt;h3 id=&quot;solution&quot;&gt;Solution&lt;/h3&gt;
+
+&lt;p&gt;Mount external SSD on the back of my laptop with self adhesive velcro tape.&lt;/p&gt;
+
+&lt;p&gt;I was watching Silicon Valley and I noticed that Richard Hendricks had a MacBook with a dongle sticked to the back. This is where I got the idea!
+It’s nothing new or unique, but I never stumbled on it.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/2021/apple-macbook-laptop-used-by-thomas-middleditch-as-richard-hendricks-in-silicon-valley-s6e1.jpg&quot; alt=&quot;MacBook Pro with External SSD&quot; /&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;process&quot;&gt;Process&lt;/h3&gt;
+
+&lt;p&gt;Cut the velcro tape to required length.
+&lt;img src=&quot;/assets/images/2021/macbook-ssd-2.jpg&quot; alt=&quot;MacBook Pro with External SSD&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Stick the rough side velcro on the external drive, soft side on the laptop.
+&lt;img src=&quot;/assets/images/2021/macbook-ssd-3.jpg&quot; alt=&quot;MacBook Pro with External SSD&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Join both velcro sides together.
+&lt;img src=&quot;/assets/images/2021/macbook-ssd-4.jpg&quot; alt=&quot;MacBook Pro with External SSD&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Profit!
+&lt;img src=&quot;/assets/images/2021/macbook-ssd-5.jpg&quot; alt=&quot;MacBook Pro with External SSD&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Gear Used&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Computer: &lt;strong&gt;MacBook Pro (15-inch, 2019)&lt;/strong&gt;. If your laptop comes with swappable storage or extra drive bays, then you’re in luck.&lt;/p&gt;
+
+&lt;p&gt;Drive: &lt;strong&gt;&lt;a href=&quot;https://www.amazon.com/Samsung-T5-Portable-SSD-MU-PA1T0B/dp/B073H552FJ&quot;&gt;Samsung T5 1TB&lt;/a&gt;&lt;/strong&gt;. I like the drive a lot: it’s light, small, fast and reliable. Currently there is a new Samsung T7 model worth checking out.&lt;/p&gt;
+
+&lt;p&gt;Cable: &lt;strong&gt;&lt;a href=&quot;https://www.amazon.com/dp/B08F9ZTN2J/ref=cm_sw_em_r_mt_dp_5SK71RET7RMZD38PWM5P&quot;&gt;EasyAcc USB-C to USB-C 10Gbps (20 cm)&lt;/a&gt;&lt;/strong&gt;. Default Samsung T5 cable is not flexible enough and too long for this to comfortably work.&lt;/p&gt;
+
+&lt;p&gt;Tape: &lt;strong&gt;&lt;a href=&quot;https://www.amazon.de/gp/product/B085NZ5JVT/ref=ppx_yo_dt_b_asin_title_o00_s01?ie=UTF8&amp;amp;psc=1&quot;&gt;Sunriz Self-Adhesive Velcro Tape, (20 mm Wide)&lt;/a&gt;&lt;/strong&gt;. I guess any other brand would do the job.&lt;/p&gt;
+
+&lt;h3 id=&quot;function-over-form&quot;&gt;Function Over Form&lt;/h3&gt;
+&lt;p&gt;I posted this solution to &lt;a href=&quot;https://www.reddit.com/r/techsupportmacgyver/comments/lyfioa/solution_for_external_ssd/&quot;&gt;r/techsupportmacgyver&lt;/a&gt;, &lt;a href=&quot;https://www.reddit.com/r/macbookpro/comments/lyz5jq/solution_for_external_ssd/&quot;&gt;r/macbookpro&lt;/a&gt; and &lt;a href=&quot;https://www.reddit.com/r/laptops/comments/lyz5bf/solution_for_external_ssd/&quot;&gt;r/laptops&lt;/a&gt; on Reddit. I was surprised that so many people reacted to it.&lt;/p&gt;
+
+&lt;p&gt;It was interesting to see that it sparked a lot of discussion about function over form. People on r/macbookpro were more sceptical than r/techsupportmacgyver or r/laptops, but most people had positive reactions. &lt;a href=&quot;https://www.reddit.com/r/macbookpro/comments/lyz5jq/solution_for_external_ssd/gpyfaei?utm_source=share&amp;amp;utm_medium=web2x&amp;amp;context=3&quot;&gt;This thread&lt;/a&gt; illustrates it perfectly:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/2021/macbook-reddit-screenshot.png&quot; alt=&quot;MacBook Pro with External SSD&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;I can only agree. Function over form, not vice versa. We should use our devices to do real work, not treat them like jewellery.&lt;/p&gt;
+
+&lt;h3 id=&quot;discussion&quot;&gt;Discussion&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;Reddit: [&lt;a href=&quot;https://www.reddit.com/r/techsupportmacgyver/comments/lyfioa/solution_for_external_ssd&quot;&gt;r/techsupportmacgyver&lt;/a&gt;, &lt;a href=&quot;https://www.reddit.com/r/macbookpro/comments/lyz5jq/solution_for_external_ssd&quot;&gt;r/macbookpro&lt;/a&gt;, &lt;a href=&quot;https://www.reddit.com/r/laptops/comments/lyz5bf/solution_for_external_ssd&quot;&gt;r/laptops&lt;/a&gt;]&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;notes&quot;&gt;Notes&lt;/h3&gt;
+&lt;div class=&quot;footnotes&quot; role=&quot;doc-endnotes&quot;&gt;
+  &lt;ol&gt;
+    &lt;li id=&quot;fn:1&quot; role=&quot;doc-endnote&quot;&gt;
+      &lt;p&gt;Character and the protagonist in the TV series &lt;a href=&quot;https://www.imdb.com/title/tt0088559&quot;&gt;MacGyver&lt;/a&gt;. &lt;a href=&quot;https://www.urbandictionary.com/define.php?term=Macgyver&quot;&gt;Urban Dictionary&lt;/a&gt; describes it the best: “the ability to use a dorito, some duct tape, and a paper clip to create a time machine”. &lt;a href=&quot;#fnref:1&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+  &lt;/ol&gt;
+&lt;/div&gt;</content><author><name>Ernestas Narmontas</name><email>ernestasn@pm.me</email></author><category term="macbook" /><category term="samsung" /><category term="ssd" /><category term="macgyver" /><category term="tipsandtricks" /><category term="lightroom" /><summary type="html">Here is an awesome MacGyver1 solution for expanding MacBook storage. Character and the protagonist in the TV series MacGyver. Urban Dictionary describes it the best: “the ability to use a dorito, some duct tape, and a paper clip to create a time machine”. &amp;#8617;</summary></entry><entry><title type="html">Cache Consul DNS TTL With Dnsmasq</title><link href="https://ernestas.me/2020/11/17/cache-consul-dns-ttl-with-dnsmasq" rel="alternate" type="text/html" title="Cache Consul DNS TTL With Dnsmasq" /><published>2020-11-17T00:00:00+00:00</published><updated>2020-11-17T00:00:00+00:00</updated><id>https://ernestas.me/2020/11/17/cache-consul-dns-ttl-with-dnsmasq</id><content type="html" xml:base="https://ernestas.me/2020/11/17/cache-consul-dns-ttl-with-dnsmasq">&lt;p&gt;While testing &lt;a href=&quot;https://learn.hashicorp.com/tutorials/consul/dns-caching&quot;&gt;Consul DNS caching&lt;/a&gt;,
+I have noticed that Dnsmasq does not cache Consul responses. If you are also using
+&lt;a href=&quot;https://learn.hashicorp.com/tutorials/consul/dns-forwarding#dnsmasq-setup&quot;&gt;Dnsmasq to forward DNS&lt;/a&gt;
+queries to Consul, you may run into the same issue.
+This guide will walk though all required steps to enable Consul DNS TTL cache with Dnsmasq.&lt;/p&gt;
+
+&lt;h2 id=&quot;tldr&quot;&gt;TL;DR&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;Problem&lt;/strong&gt;: Dnsmasq won’t cache responses from non recursive name servers.
+Consul refuses recursive queries without recursor configuration.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Solution&lt;/strong&gt;: Configure fake &lt;a href=&quot;https://www.consul.io/docs/agent/options.html#recursors&quot;&gt;recursor&lt;/a&gt;
+in Consul by adding &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;&quot;recursors&quot;: [ &quot;127.0.0.2&quot; ]&lt;/code&gt; to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/etc/consul/consul.json&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;detailed&quot;&gt;Detailed&lt;/h2&gt;
+
+&lt;h3 id=&quot;enable-consul-dns-caching&quot;&gt;Enable Consul DNS Caching&lt;/h3&gt;
+
+&lt;p&gt;Edit &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/etc/consul/consul.json&lt;/code&gt; and add the config below.
+It should enable TTL values of 1 minute for all services and nodes, 5 minutes for test service.
+You can replace it with any other service you prefer.&lt;/p&gt;
+&lt;div class=&quot;language-json highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;dns_config&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+    &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;service_ttl&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+      &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;*&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;60s&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+      &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;test&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;5m&quot;&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+    &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+    &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;node_ttl&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;60s&quot;&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Reload Consul with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;consul reload&lt;/code&gt;.\&lt;/p&gt;
+
+&lt;p&gt;Verify Consul returns DNS response with TTL value. Note the Consul DNS port &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;8600&lt;/code&gt;.&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;dig +nocmd +noall +answer test.service.consul @127.0.0.1 &lt;span class=&quot;nt&quot;&gt;-p&lt;/span&gt; 8600
+test.service.consul.	300	IN	A	10.135.205.232
+test.service.consul.	300	IN	A	10.135.174.59
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;We can see that Consul DNS cache is working, we have &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;300&lt;/code&gt; seconds TTL in the second column for
+test service.&lt;br /&gt;
+Now that Consul is responding with TTL values, we need to cache them on client level.
+That’s where Dnsmasq comes in.&lt;/p&gt;
+
+&lt;h3 id=&quot;enable-dnsmasq-caching&quot;&gt;Enable Dnsmasq Caching&lt;/h3&gt;
+
+&lt;p&gt;We use Dnsmasq for forwarding client DNS requests to Consul.
+It also forwards non Consul requests to other DNS servers. We need to enable caching for Dnsmasq,
+in order to cache Consul replies with TTL.&lt;/p&gt;
+
+&lt;p&gt;Edit Dnsmasq config file &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/etc/dnsmasq.conf&lt;/code&gt; and add/uncomment &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;cache-size&lt;/code&gt; parameter
+(change &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;150&lt;/code&gt; to the size you need, but for this example it’s enough):&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;cache-size&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;150
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Also, enable logging so we can check which records Dnsmasq cached:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;log-facility&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/var/log/dnsmasq.log
+log-queries
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Restart Dnsmasq service:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;systemctl restart dnsmasq
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Follow Dnsmasq logs:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;tail&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-f&lt;/span&gt; /var/log/dnsmasq.log | &lt;span class=&quot;nb&quot;&gt;grep &lt;/span&gt;cached
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Verify that Dnsmasq caches requested domains. Note the Dnsmasq DNS port &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;53&lt;/code&gt;.&lt;br /&gt;
+First response should contain the IP address and TTL value in the second column.&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;dig +nocmd +noall +answer google.com @127.0.0.1 &lt;span class=&quot;nt&quot;&gt;-p&lt;/span&gt; 53
+google.com.		118	IN	A	216.58.206.78
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Second response should show lower TTL if the cache is working:&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;dig +nocmd +noall +answer google.com @127.0.0.1 &lt;span class=&quot;nt&quot;&gt;-p&lt;/span&gt; 53
+google.com.		114	IN	A	216.58.206.78
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;After the second command, you should also see in Dnsmasq logs that cached response was returned
+for &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;google.com&lt;/code&gt;:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Nov 16 20:49:04 dnsmasq[22925]: cached google.com is 216.58.206.78
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;problem&quot;&gt;Problem&lt;/h3&gt;
+
+&lt;p&gt;Dnsmasq doesn’t cache Consul domain records. No matter how many times I lookup the address,
+TTL doesn’t seem to change. Dnsmasq logs are also not showing any cached responses for
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;.consul&lt;/code&gt; domain.&lt;/p&gt;
+
+&lt;p&gt;After some head banging I found out the answer
+&lt;a href=&quot;https://discuss.hashicorp.com/t/dnsmasq-problem-caching-responses-from-consul/14673&quot;&gt;here&lt;/a&gt;.
+Turns out Dnsmasq won’t cache responses from non recursive name servers.
+Consul refuses recursive queries without recursor configuration.
+From Dnsmasq &lt;a href=&quot;http://www.thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html&quot;&gt;man page&lt;/a&gt;:&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Dnsmasq accepts DNS queries and either answers them from a small, local,
+  cache or forwards them to a real, recursive, DNS server.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Here is the &lt;a href=&quot;https://github.com/imp/dnsmasq/blob/4e7694d7107d2299f4aaededf8917fceb5dfb924/src/rfc1035.c#L847-L857&quot;&gt;source code&lt;/a&gt;
+for caching in Dnsmasq:&lt;/p&gt;
+&lt;div class=&quot;language-c highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;cm&quot;&gt;/* Don't put stuff from a truncated packet into the cache.
+   Don't cache replies from non-recursive nameservers, since we may get a
+   reply containing a CNAME but not its target, even though the target
+   does exist. */&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;header&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;hb3&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;HB3_TC&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;header&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;hb4&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;HB4_CD&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;header&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;hb4&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;HB4_RA&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;no_cache_dnssec&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;cache_end_insert&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;solution&quot;&gt;Solution&lt;/h3&gt;
+
+&lt;p&gt;Configure dummy &lt;a href=&quot;https://www.consul.io/docs/agent/options.html#recursors&quot;&gt;recursor&lt;/a&gt; in Consul.&lt;br /&gt;
+Edit &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/etc/consul/consul.json&lt;/code&gt; and add &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;recursors&lt;/code&gt; entry with dead address (in your environment):&lt;/p&gt;
+
+&lt;div class=&quot;language-json highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;recursors&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;127.0.0.2&quot;&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;After &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;consul reload&lt;/code&gt; Dnsmasq should cache responses from &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;.consul&lt;/code&gt; domain.&lt;/p&gt;
+
+&lt;p&gt;First query:&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;dig +nocmd +noall +answer test.service.consul @127.0.0.1 &lt;span class=&quot;nt&quot;&gt;-p&lt;/span&gt; 53
+test.service.consul.	300	IN	A	10.135.205.232
+test.service.consul.	300	IN	A	10.135.174.59
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Second query:&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;dig +nocmd +noall +answer test.service.consul @127.0.0.1 &lt;span class=&quot;nt&quot;&gt;-p&lt;/span&gt; 53
+test.service.consul.	297	IN	A	10.135.174.59
+test.service.consul.	297	IN	A	10.135.205.232
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Dnsmasq log:&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Nov 16 20:49:04 dnsmasq[22925]: cached google.com is 216.58.206.78
+Nov 16 21:53:49 dnsmasq[22925]: cached test.service.consul is 10.135.174.59
+Nov 16 21:53:49 dnsmasq[22925]: cached test.service.consul is 10.135.205.232
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;hr /&gt;
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;If any of your servers will send a request to Consul DNS server for non &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;.consul&lt;/code&gt; domain, Consul will try to forward it to non existing recursor. By default, it will time out in 2s, but you can adjust that setting with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;recursor_timeout&lt;/code&gt; option and set to lower value.&lt;/p&gt;
+
+&lt;div class=&quot;language-json highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;dns_config&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+    &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;recursor_timeout&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;1ms&quot;&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;</content><author><name>Ernestas Narmontas</name><email>ernestasn@pm.me</email></author><category term="hashicorp" /><category term="consul" /><category term="dnsmasq" /><category term="dns" /><summary type="html">While testing Consul DNS caching, I have noticed that Dnsmasq does not cache Consul responses. If you are also using Dnsmasq to forward DNS queries to Consul, you may run into the same issue. This guide will walk though all required steps to enable Consul DNS TTL cache with Dnsmasq.</summary></entry><entry><title type="html">My Curated List of SRE and DevOps Resources</title><link href="https://ernestas.me/2020/09/25/my-curated-list-of-sre-and-devops-resources" rel="alternate" type="text/html" title="My Curated List of SRE and DevOps Resources" /><published>2020-09-25T00:00:00+00:00</published><updated>2020-09-25T00:00:00+00:00</updated><id>https://ernestas.me/2020/09/25/my-curated-list-of-sre-and-devops-resources</id><content type="html" xml:base="https://ernestas.me/2020/09/25/my-curated-list-of-sre-and-devops-resources">&lt;p&gt;I am curating SRE and DevOps resources for those who want to get into the field.
+New stuff will be added in &lt;a href=&quot;https://github.com/ernnst/devops-resources&quot;&gt;ernnst/devops-resources&lt;/a&gt;
+repository and automatically updated in this article. Enjoy!&lt;/p&gt;
+
+&lt;h3 id=&quot;company-blogs&quot;&gt;Company Blogs&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://digitalocean.com/blog&quot;&gt;DigitalOcean Blog&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://doordash.engineering&quot;&gt;DoorDash Engineering Blog&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://blogs.dropbox.com/tech&quot;&gt;Dropbox Tech Blog&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://tech.ebayinc.com&quot;&gt;eBay Tech Blog&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://codeascraft.com&quot;&gt;Etsy Engineering, Code as Craft&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://engineering.fb.com&quot;&gt;Facebook Engineering&lt;/a&gt;
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;https://engineering.fb.com/category/data-center-engineering&quot;&gt;Data Center Engineering&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;https://engineering.fb.com/category/production-engineering&quot;&gt;Production Engineering&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://developers.googleblog.com&quot;&gt;Google Developers Blog&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://landing.google.com/sre&quot;&gt;Google Site Reliability Engineering&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://engineering.linkedin.com/blog&quot;&gt;LinkedIn Engineering&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://medium.com/insiden26/tagged/technology&quot;&gt;N26 Technology&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://medium.com/netflix-techblog&quot;&gt;Netflix TechBlog&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://redditblog.com/topic/technology&quot;&gt;Reddit Technology&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://slack.engineering&quot;&gt;Slack Engineering&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://stackoverflow.blog&quot;&gt;Stack Overflow, The Overflow&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://engineering.vinted.com&quot;&gt;Vinted Engineering&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.wix.engineering&quot;&gt;Wix Engineering&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;magazines&quot;&gt;Magazines&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://increment.com&quot;&gt;Increment&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;newsletters&quot;&gt;Newsletters&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://digitalocean.com/community/newsletter&quot;&gt;DigitalOcean: Infrastructure as a Newsletter&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://ma.ttias.be/cronweekly&quot;&gt;cron.weekly&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://weekly.statuscode.com&quot;&gt;StatusCode Weekly&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;reddit&quot;&gt;Reddit&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://reddit.com/r/sre&quot;&gt;r/sre&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://reddit.com/r/devops&quot;&gt;r/devops&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://reddit.com/r/sysadmin&quot;&gt;r/sysadmin&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://reddit.com/r/networking&quot;&gt;r/networking&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;people&quot;&gt;People&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;Jeff Geerling, Author and Software Developer / &lt;a href=&quot;https://github.com/geerlingguy&quot;&gt;GitHub&lt;/a&gt;, &lt;a href=&quot;https://twitter.com/geerlingguy&quot;&gt;Twitter&lt;/a&gt;, &lt;a href=&quot;https://jeffgeerling.com&quot;&gt;Web&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;Kelsey Hightower, Staff Developer Advocate at &lt;a href=&quot;https://cloud.google.com&quot;&gt;Google Cloud&lt;/a&gt; / &lt;a href=&quot;https://github.com/kelseyhightower&quot;&gt;GitHub&lt;/a&gt;, &lt;a href=&quot;https://twitter.com/kelseyhightower&quot;&gt;Twitter&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;Seth Vargo, Engineer at &lt;a href=&quot;https://cloud.google.com&quot;&gt;Google Cloud&lt;/a&gt; / &lt;a href=&quot;https://github.com/sethvargo&quot;&gt;GitHub&lt;/a&gt;, &lt;a href=&quot;https://twitter.com/sethvargo&quot;&gt;Twitter&lt;/a&gt;, &lt;a href=&quot;https://sethvargo.com&quot;&gt;Web&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;Simon Eskildsen, Principal Engineer at &lt;a href=&quot;https://shopify.com&quot;&gt;Shopify&lt;/a&gt; / &lt;a href=&quot;https://github.com/sirupsen&quot;&gt;GitHub&lt;/a&gt;, &lt;a href=&quot;https://twitter.com/Sirupsen&quot;&gt;Twitter&lt;/a&gt;, &lt;a href=&quot;https://sirupsen.com&quot;&gt;Web&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;Tammy Bryant (Butow), Principal Site Reliability Engineer at &lt;a href=&quot;https://gremlin.com&quot;&gt;Gremlin&lt;/a&gt; / &lt;a href=&quot;https://github.com/tammybutow&quot;&gt;GitHub&lt;/a&gt;, &lt;a href=&quot;https://twitter.com/tammyxbryant&quot;&gt;Twitter&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;other&quot;&gt;Other&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://roadmap.sh/devops&quot;&gt;DevOps Roadmap&lt;/a&gt; - Step by step guide for getting into DevOps&lt;/li&gt;
+&lt;/ul&gt;</content><author><name>Ernestas Narmontas</name><email>ernestasn@pm.me</email></author><category term="devops" /><category term="sre" /><summary type="html">I am curating SRE and DevOps resources for those who want to get into the field. New stuff will be added in ernnst/devops-resources repository and automatically updated in this article. Enjoy!</summary></entry><entry><title type="html">On Call vs. On-Duty</title><link href="https://ernestas.me/2020/08/23/on-call-vs-on-duty" rel="alternate" type="text/html" title="On Call vs. On-Duty" /><published>2020-08-23T00:00:00+00:00</published><updated>2020-08-23T00:00:00+00:00</updated><id>https://ernestas.me/2020/08/23/on-call-vs-on-duty</id><content type="html" xml:base="https://ernestas.me/2020/08/23/on-call-vs-on-duty">&lt;p&gt;What is the difference between on-call and on-duty for a system administrator?&lt;/p&gt;
+
+&lt;p&gt;During on-call sysadmin is reacting to alerts and paged calls when  things are not working. During the day busy with regular projects, but  prioritises on-call responsibilities.&lt;/p&gt;
+
+&lt;p&gt;During on-duty sysadmin handles full operational state of the system.  Reacting to alerts and calls, responding to developer requests,  resolving issues that occur. Improving monitoring and infrastructure on the go. During the day focused on duty, not working on any projects.&lt;/p&gt;
+
+&lt;p&gt;On-call - reacting when called, on-duty - being the one in charge of the whole system operation.&lt;/p&gt;</content><author><name>Ernestas Narmontas</name><email>ernestasn@pm.me</email></author><category term="oncall" /><category term="onduty" /><category term="devops" /><category term="sre" /><summary type="html">What is the difference between on-call and on-duty for a system administrator?</summary></entry><entry><title type="html">GitHub Uptime and Microsoft</title><link href="https://ernestas.me/2020/07/13/github-uptime-and-microsoft" rel="alternate" type="text/html" title="GitHub Uptime and Microsoft" /><published>2020-07-13T00:00:00+00:00</published><updated>2020-07-13T00:00:00+00:00</updated><id>https://ernestas.me/2020/07/13/github-uptime-and-microsoft</id><content type="html" xml:base="https://ernestas.me/2020/07/13/github-uptime-and-microsoft">&lt;p&gt;Recently GitHub reliability has been getting worse. It’s 2020 July 13, Monday and GitHub wasn’t working for around 2 hours. Take a look at their &lt;a href=&quot;https://www.githubstatus.com&quot;&gt;status page&lt;/a&gt;. You’ll see something like the screenshot below, taken at 2020-07-13 07:33 UTC.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2020-07-status.png&quot; alt=&quot;GitHub Status on 2020-07-13&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Millions of individuals and businesses rely on GitHub daily. Having that in mind, I am surprised how GitHub allows such a generous error budget for themselves. For example in April 2020 it went down to &lt;strong&gt;99.67%&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;After exploring their &lt;a href=&quot;https://www.githubstatus.com/uptime&quot;&gt;historic status page data&lt;/a&gt; I noticed one interesting pattern. Since 2014, GitHub had their first outage in November 2018, only a month after Microsoft &lt;a href=&quot;https://blogs.microsoft.com/blog/2018/10/26/microsoft-completes-github-acquisition&quot;&gt;announced&lt;/a&gt; their acquisition was complete. More often and serious incidents started in 2019 December. Whether it’s coincidence or consequence, you decide.&lt;/p&gt;
+
+&lt;p&gt;Take a look at historic uptime for Git Operations.&lt;/p&gt;
+
+&lt;h3 id=&quot;github-3-years-before-microsoft&quot;&gt;GitHub 3 Years Before Microsoft&lt;/h3&gt;
+&lt;h5 id=&quot;2014-november---2015-january&quot;&gt;2014 November - 2015 January&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2014-11.jpg&quot; alt=&quot;2014 November - 2015 January&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2015-february---2015-april&quot;&gt;2015 February - 2015 April&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2015-02.jpg&quot; alt=&quot;2015 February - 2015 April&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2015-may---2015-july&quot;&gt;2015 May - 2015 July&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2015-05.jpg&quot; alt=&quot;2015 May - 2015 July&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2015-august---2015-october&quot;&gt;2015 August - 2015 October&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2015-08.jpg&quot; alt=&quot;2015 August - 2015 October&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2015-november---2016-january&quot;&gt;2015 November - 2016 January&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2015-11.jpg&quot; alt=&quot;2015 November - 2016 January&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2016-february---2016-april&quot;&gt;2016 February - 2016 April&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2016-02.jpg&quot; alt=&quot;2016 February - 2016 April&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2016-may---2016-july&quot;&gt;2016 May - 2016 July&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2016-05.jpg&quot; alt=&quot;2016 May - 2016 July&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2016-august---2016-october&quot;&gt;2016 August - 2016 October&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2016-08.jpg&quot; alt=&quot;2016 August - 2016 October&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2016-november---2017-january&quot;&gt;2016 November - 2017 January&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2016-11.jpg&quot; alt=&quot;2016 November - 2017 January&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2017-february---2017-april&quot;&gt;2017 February - 2017 April&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2017-02.jpg&quot; alt=&quot;2017 February - 2017 April&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2017-may---2017-july&quot;&gt;2017 May - 2017 July&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2017-05.jpg&quot; alt=&quot;2017 May - 2017 July&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2017-august---2017-october&quot;&gt;2017 August - 2017 October&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2017-08.jpg&quot; alt=&quot;2017 August - 2017 October&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2017-november---2018-january&quot;&gt;2017 November - 2018 January&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2017-11.jpg&quot; alt=&quot;2017 November - 2018 January&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2018-february---2018-april&quot;&gt;2018 February - 2018 April&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2018-02.jpg&quot; alt=&quot;2018 February - 2018 April&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2018-may---2018-july&quot;&gt;2018 May - 2018 July&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2018-05.jpg&quot; alt=&quot;2018 May - 2018 July&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2018-august---2018-october&quot;&gt;2018 August - 2018 October&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2018-08.jpg&quot; alt=&quot;2018 August - 2018 October&quot; /&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;github-under-microsoft-acquired-in-2018-october&quot;&gt;GitHub Under Microsoft (Acquired in 2018 October)&lt;/h3&gt;
+&lt;h5 id=&quot;2018-november---2019-january&quot;&gt;2018 November - 2019 January&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2018-11.jpg&quot; alt=&quot;2018 November - 2019 January&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2019-february---2019-april&quot;&gt;2019 February - 2019 April&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2019-02.jpg&quot; alt=&quot;2019 February - 2019 April&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2019-may---2019-july&quot;&gt;2019 May - 2019 July&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2019-05.jpg&quot; alt=&quot;2019 May - 2019 July&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2019-august---2019-october&quot;&gt;2019 August - 2019 October&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2019-08.jpg&quot; alt=&quot;2019 August - 2019 October&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2019-november---2020-january&quot;&gt;2019 November - 2020 January&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2019-11.jpg&quot; alt=&quot;2019 November - 2020 January&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2020-february---2020-april&quot;&gt;2020 February - 2020 April&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2020-02.jpg&quot; alt=&quot;2020 February - 2020 April&quot; /&gt;&lt;/p&gt;
+&lt;h5 id=&quot;2020-may---2020-july&quot;&gt;2020 May - 2020 July&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2020-05.jpg&quot; alt=&quot;2020 May - 2020 July&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;It’s not only Git Operations, but other services too. Explore their &lt;a href=&quot;https://www.githubstatus.com/uptime&quot;&gt;uptime page&lt;/a&gt; and you’ll see similar pattern. API Requests, Web-hooks, Issues, Pull Requests, Projects were having downtimes even more often than Git Operations.&lt;/p&gt;
+
+&lt;p&gt;Let’s hope it’s temporary and GitHub error 500 won’t become their own version of Blue Screen of Death. In this case it would be Green Screen of Death (GSoD or GhSoD).&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/2020/github-2020-07-gsod.png&quot; alt=&quot;GitHub - Green Screen of Death&quot; /&gt;&lt;/p&gt;</content><author><name>Ernestas Narmontas</name><email>ernestasn@pm.me</email></author><category term="github" /><category term="git" /><summary type="html">Recently GitHub reliability has been getting worse. It’s 2020 July 13, Monday and GitHub wasn’t working for around 2 hours. Take a look at their status page. You’ll see something like the screenshot below, taken at 2020-07-13 07:33 UTC.</summary></entry><entry><title type="html">Hello, World! (v.2.0.0)</title><link href="https://ernestas.me/2020/07/09/hello-world-v2" rel="alternate" type="text/html" title="Hello, World! (v.2.0.0)" /><published>2020-07-09T00:00:00+00:00</published><updated>2020-07-09T00:00:00+00:00</updated><id>https://ernestas.me/2020/07/09/hello-world-v2</id><content type="html" xml:base="https://ernestas.me/2020/07/09/hello-world-v2">&lt;p&gt;Recently I have started working as a Site Reliability Engineer at &lt;a href=&quot;https://vinted.com&quot;&gt;Vinted&lt;/a&gt;. For the first time in my career I am working with production infrastructure and that brings me lot’s of new challenges.&lt;/p&gt;
+
+&lt;p&gt;I have decided to re-start my blog, so I can document and share the whole process. I will be sharing my opinion and knowledge about personal and work projects.&lt;/p&gt;
+
+&lt;p&gt;Check out my &lt;a href=&quot;/about&quot;&gt;About&lt;/a&gt; page for more details!&lt;/p&gt;
+
+&lt;p&gt;Ernestas&lt;/p&gt;</content><author><name>Ernestas Narmontas</name><email>ernestasn@pm.me</email></author><category term="blog" /><summary type="html">Recently I have started working as a Site Reliability Engineer at Vinted. For the first time in my career I am working with production infrastructure and that brings me lot’s of new challenges.</summary></entry><entry><title type="html">Upgrading HP Aruba Switch Firmware</title><link href="https://ernestas.me/2017/11/21/upgrading-hp-aruba-switch-firmware" rel="alternate" type="text/html" title="Upgrading HP Aruba Switch Firmware" /><published>2017-11-21T00:00:00+00:00</published><updated>2017-11-21T00:00:00+00:00</updated><id>https://ernestas.me/2017/11/21/upgrading-hp-aruba-switch-firmware</id><content type="html" xml:base="https://ernestas.me/2017/11/21/upgrading-hp-aruba-switch-firmware">&lt;p&gt;&lt;img src=&quot;/assets/images/2017/aruba_1.jpg&quot; alt=&quot;HP Aruba&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Guide for upgrading HP Aruba (formerly ProCurve) switch firmware.&lt;/p&gt;
+
+&lt;h3 id=&quot;requirements&quot;&gt;Requirements&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;macOS&lt;/li&gt;
+  &lt;li&gt;HP Aruba Switch&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;1-start-built-in-tftp-server-on-your-mac&quot;&gt;1. Start built-in &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;tftp&lt;/code&gt; server on your Mac&lt;/h3&gt;
+&lt;p&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;tftp&lt;/code&gt; server will enable file transfers between macOS and Aruba switch.&lt;/p&gt;
+
+&lt;p&gt;Run the following command in Terminal:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo launchctl load -F /System/Library/LaunchDaemons/tftp.plist
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Symlink &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;tftp&lt;/code&gt; source folder to some other folder in your home directory that you have full control over:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo rm -rf /private/tftpboot
+mkdir /Users/username/tftpboot
+sudo ln -s /Users/username/tftpboot /private/tftpboot
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Restart &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;tftp&lt;/code&gt; server for changes to take effect:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo launchctl unload -F /System/Library/LaunchDaemons/tftp.plist
+sudo launchctl load -F /System/Library/LaunchDaemons/tftp.plist
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;2-backup-current-switch-configuration&quot;&gt;2. Backup current switch configuration&lt;/h3&gt;
+&lt;p&gt;Before downloading configuration from switch, you have to create empty file and give proper permissions so your switch can write the configuration over it.&lt;/p&gt;
+
+&lt;p&gt;Create config file:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;cd /Users/username/tftpboot
+touch switch.conf
+chmod 766 switch.conf
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Save startup configuration to file:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;write memory
+copy startup-config tftp 192.168.100.100 switch.conf
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Don’t forget to change the permissions back after successful file transfer.&lt;/p&gt;
+
+&lt;h3 id=&quot;3-check-current-firmware-version&quot;&gt;3. Check current firmware version&lt;/h3&gt;
+&lt;p&gt;In this example, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;WB.16.02.0012&lt;/code&gt; firmware uses &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;WB.16.03&lt;/code&gt; boot ROM. It is upgraded automatically from the firmware image to the version that is required.
+Make sure that you are upgrading from supported version. Sometimes you may need to install incremented backups to keep the configuration intact.&lt;/p&gt;
+
+&lt;p&gt;Check current flash:&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;HP-2920# show flash
+Image             Size (bytes) Date     Version
+----------------- ------------ -------- --------------
+Primary Image    :    14233321 01/26/17 WB.16.02.0012
+Secondary Image  :    14233321 01/26/17 WB.16.02.0012
+
+Boot ROM Version : WB.16.03
+Default Boot     : Primary
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;4-download-the-latest-firmware-from-hp&quot;&gt;4. Download the latest firmware from HP&lt;/h3&gt;
+&lt;p&gt;Open &lt;a href=&quot;https://h10145.www1.hp.com/downloads/ProductsList.aspx?smp=1&quot;&gt;this&lt;/a&gt; link and type in your product name to download the newest firmware image. In this example for &lt;a href=&quot;https://h10145.www1.hp.com/downloads/SoftwareReleases.aspx?ProductNumber=J9726A&amp;amp;lang=&amp;amp;cc=&amp;amp;prodSeriesId=&quot;&gt;Aruba 2920 24G Switch&lt;/a&gt; it’s &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;WB_16_04_0009.swi&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Copy downloaded firmware to your &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;tftp&lt;/code&gt; folder:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;cp Downloads/WB_16_04_0009.swi /Users/username/tftpboot
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;5-upload-and-flash-the-firmware-on-secondary-image&quot;&gt;5. Upload and flash the firmware on secondary image&lt;/h3&gt;
+&lt;p&gt;Primary Image: Default storage for switch software image.&lt;/p&gt;
+
+&lt;p&gt;Secondary Image: Additional storage for either a redundant or an alternate switch software image.&lt;/p&gt;
+
+&lt;p&gt;With the Primary/Secondary flash option, you can test a new image in your system without having to replace a previously existing image.
+It is recommended to upgrade secondary image while booted into primary and after the upgrade boot into secondary to test if everything works well.&lt;sup id=&quot;fnref:1&quot; role=&quot;doc-noteref&quot;&gt;&lt;a href=&quot;#fn:1&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
+
+&lt;p&gt;Copy firmware to the secondary image:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;copy tftp flash 192.168.100.100 WB_16_04_0009.swi secondary
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;You should see “The Secondary OS Image will be deleted, continue [y/n]?”. Respond to the warning message by pressing &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;y&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Now you should see “Validating and Writing System Software to Flash…”&lt;/p&gt;
+
+&lt;p&gt;Wait for the process to finish and reboot the switch to the new firmware:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;boot system flash secondary
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Check if everything is working well and no configuration is lost with the new firmware.&lt;/p&gt;
+
+&lt;h3 id=&quot;6-upload-and-flash-the-firmware-on-primary-image&quot;&gt;6. Upload and flash the firmware on primary image&lt;/h3&gt;
+&lt;p&gt;Repeat the same commands from Step 5, using primary instead of secondary.&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;copy tftp flash 192.168.100.100 WB_16_04_0009.swi primary
+boot system flash primary
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;7-validate-the-new-firmware-versions&quot;&gt;7. Validate the new firmware versions&lt;/h3&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;HP-2920# sh flash
+Image             Size (bytes) Date     Version
+----------------- ------------ -------- --------------
+Primary Image    :    16495314 10/13/17 WB.16.04.0009        
+Secondary Image  :    16495314 10/13/17 WB.16.04.0009       
+
+Boot ROM Version
+----------------
+Primary Boot ROM Version   : WB.16.03
+Secondary Boot ROM Version : WB.16.03
+
+Default Boot Image   : Primary
+Default Boot ROM     : Primary
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;The system has been updated to the newest version!&lt;/p&gt;
+
+&lt;div class=&quot;footnotes&quot; role=&quot;doc-endnotes&quot;&gt;
+  &lt;ol&gt;
+    &lt;li id=&quot;fn:1&quot; role=&quot;doc-endnote&quot;&gt;
+      &lt;p&gt;&lt;a href=&quot;http://h22208.www2.hpe.com/eginfolib/networking/docs/switches/common/15-18/5998-8158_bog/content/ch04s07.html&quot;&gt;Using Primary and Secondary flash image options on HP&lt;/a&gt; &lt;a href=&quot;#fnref:1&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+  &lt;/ol&gt;
+&lt;/div&gt;</content><author><name>Ernestas Narmontas</name><email>ernestasn@pm.me</email></author><category term="networking" /><category term="hardware" /><summary type="html"></summary></entry><entry><title type="html">Ubuntu 16.04 Desktop Unattended Installation</title><link href="https://ernestas.me/2017/02/12/ubuntu-1604-desktop-unattended-installation" rel="alternate" type="text/html" title="Ubuntu 16.04 Desktop Unattended Installation" /><published>2017-02-12T00:00:00+00:00</published><updated>2017-02-12T00:00:00+00:00</updated><id>https://ernestas.me/2017/02/12/ubuntu-1604-desktop-unattended-installation</id><content type="html" xml:base="https://ernestas.me/2017/02/12/ubuntu-1604-desktop-unattended-installation">&lt;p&gt;&lt;img src=&quot;/assets/images/2017/ubuntu_1.jpg&quot; alt=&quot;Ubuntu Installation&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;I previously wrote a &lt;a href=&quot;/2016/01/21/ubuntu-14.04-desktop-unattended-installation&quot;&gt;tutorial&lt;/a&gt; on how to automate Ubuntu Desktop 14.04 LTS installation, but for 16.04 it didn’t work because of some differences in installation media.&lt;/p&gt;
+
+&lt;p&gt;Here’s a full and tested solution to create your unattended Ubuntu installation media. For me the process on VirtualBox guest took about 30 minutes to fully boot into working system without even touching the keyboard.&lt;/p&gt;
+
+&lt;h3 id=&quot;1-create-kickstart-file&quot;&gt;1. Create Kickstart file&lt;/h3&gt;
+&lt;p&gt;Install Kickstart by typing this command into Terminal:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo apt-get install system-config-kickstart
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;After the installation process is completed, open Kickstart Configurator using Unity search or just by typing &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;system-config-kickstart&lt;/code&gt; in Terminal.&lt;/p&gt;
+
+&lt;p&gt;When the Kickstart opens, choose the settings you need for your installation. You can review all possible options on the official Kickstart Configurator &lt;a href=&quot;https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/5/html/installation_guide/ch-redhat-config-kickstart&quot;&gt;documentation site&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;When you are finished with the configuration, press File &amp;gt; Save File in the top menu. Keep default file name as &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ks.cfg&lt;/code&gt; and save it to your Desktop. Some of the options doesn’t work in Kickstart configurator, but it can be edited manually after saving &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ks.cfg&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Here are the contents of my &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ks.cfg&lt;/code&gt; file:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#Generated by Kickstart Configurator
+#platform=AMD64 or Intel EM64T
+
+#System language
+lang en_US
+#Language modules to install
+langsupport en_US
+#System keyboard
+keyboard us
+#System mouse
+mouse
+#System timezone
+timezone America/New_York
+#Root password
+rootpw --disabled
+#Initial user
+user ernestas --fullname &quot;Ernestas&quot; --iscrypted --password $1$dLKYoVUI$nb3qZVsrV7IIJMia1kskE0
+#Reboot after installation
+reboot
+#Use text mode install
+text
+#Install OS instead of upgrade
+install
+#Use CDROM installation media
+cdrom
+#System bootloader configuration
+bootloader --location=mbr
+#Clear the Master Boot Record
+zerombr yes
+#Partition clearing information
+clearpart --all --initlabel
+#Disk partitioning information
+part swap --size 2048
+part /boot --fstype ext4 --size 512
+part / --fstype ext4 --size 1 --grow
+#System authorization infomation
+auth  --useshadow  --enablemd5
+#Network information
+network --bootproto=dhcp --device=eth0
+#Firewall configuration
+firewall --disabled
+#Do not configure the X Window System
+skipx
+
+# Additional packages to install
+%packages
+ca-certificates
+openssl
+python
+openssh-server
+vim
+ubuntu-desktop
+unity
+
+# Add your custom post installation script here
+%post
+
+# Add post installation script to /usr/local/bin/ directory
+mkdir /mnt/cdrom
+mount /dev/cdrom /mnt/cdrom
+cp /mnt/cdrom/post.sh /usr/local/bin/
+chown ernestas:ernestas /usr/local/bin/post.sh
+chmod 744 /usr/local/bin/post.sh
+
+# Fix locale
+echo 'LANG=&quot;en_US.UTF-8&quot;' &amp;gt; /etc/default/locale
+echo 'LANGUAGE=&quot;en_US:en&quot;' &amp;gt;&amp;gt; /etc/default/locale
+echo 'LC_ALL=&quot;en_US.UTF-8&quot;' &amp;gt;&amp;gt; /etc/default/locale
+
+# Clean
+apt-get -f -y install
+apt-get -y autoremove
+apt-get clean
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;2-create-preseed-file&quot;&gt;2. Create Preseed file&lt;/h3&gt;
+&lt;p&gt;Pressed commands work when they are directly written inside the Kickstart file, but I wanted to separate the two files. Create new file on you desktop named &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ubuntu-auto.seed&lt;/code&gt; with the following contents:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;# Unmount drives with active partitions. Without this command all the installation process would stop and require confirmation to unmount drives that are already mounted.
+d-i preseed/early_command string umount /media || true
+
+# Don't install recommended items
+d-i preseed base-installer/install-recommends boolean false
+
+# Install only security updates automatically
+d-i preseed pkgsel/update-policy select unattended-upgrades For additional Preseed configuration options, refer to official Ubuntu [installation guide](https://help.ubuntu.com/lts/installation-guide/armhf/apbs01.html).
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;3-create-post-installation-script&quot;&gt;3. Create post installation script&lt;/h3&gt;
+&lt;p&gt;Create a file named &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;post.sh&lt;/code&gt; with your desired commands.&lt;/p&gt;
+
+&lt;p&gt;Even if Kickstart has the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;%post&lt;/code&gt; section, sometimes you may need to make some changes only after the system has fully booted.&lt;/p&gt;
+
+&lt;p&gt;My &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ks.cfg&lt;/code&gt; copies &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;post.sh&lt;/code&gt; file to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/usr/local/bin&lt;/code&gt; directory for that. If you don’t want to use the post installation script simply comment out the commands in &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ks.cfg&lt;/code&gt; after &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;# Add post installation script...&lt;/code&gt; line.&lt;/p&gt;
+
+&lt;p&gt;Here is my shortened &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;post.sh&lt;/code&gt; file for example:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#!/bin/bash
+# Set hostname
+read -p &quot;Hostname: &quot; pcHost
+echo &quot;Changing the hostname to $pcHost&quot;
+sed -i &quot;s/ubuntu/$pcHost/g&quot; /etc/hostname
+sed -i &quot;s/ubuntu/$pcHost/g&quot; /etc/hosts
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;4-extract-original-iso-image&quot;&gt;4. Extract original ISO image&lt;/h3&gt;
+&lt;p&gt;Download &lt;a href=&quot;https://www.ubuntu.com/download/server/thank-you?version=16.04.1&amp;amp;architecture=amd64&quot;&gt;Ubuntu Server 16.04 x64&lt;/a&gt; from official Ubuntu website and put it on your desktop. It is necessary to use server version, because desktop version doesn’t support unattended installations. Desktop functionality will work after &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ubuntu-desktop&lt;/code&gt; package in &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;%packages&lt;/code&gt; section of &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;kb.cfg&lt;/code&gt; file is installed.&lt;/p&gt;
+
+&lt;p&gt;Mount the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;.iso&lt;/code&gt; file to Ubuntu filesystem. The commands below will mount &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;.iso&lt;/code&gt; file to the folder named &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ubuntu_iso&lt;/code&gt;:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;cd ~/Desktop
+mkdir ubuntu_iso
+sudo mount -r -o loop ubuntu-16.04.1-server-amd64.iso ubuntu_iso
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Copy &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;.iso&lt;/code&gt; contents to another folder on your desktop so we can edit the files. Don’t forget to set the right permissions to be able to make changes.&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;mkdir ubuntu_files
+rsync -a ubuntu_iso/ ubuntu_files/
+sudo chown ernestas:ernestas ubuntu_files
+sudo chmod 755 ubuntu_files
+sudo umount ubuntu_iso
+rm -rf ubuntu_iso
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;5-edit-contents-of-iso-image&quot;&gt;5. Edit contents of ISO image&lt;/h3&gt;
+&lt;p&gt;Copy &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ks.cfg&lt;/code&gt;, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ubuntu-auto.seed&lt;/code&gt; and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;post.sh&lt;/code&gt; files to newly created &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ubuntu_files&lt;/code&gt; folder&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;cp {ks.cfg,ubuntu-auto.seed,post.sh} ubuntu_files
+chmod 644 ubuntu_files/ks.cfg ubuntu_files/ubuntu-auto.seed
+chmod 744 ubuntu_files/post.sh
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Change &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;isolinux&lt;/code&gt; folder and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;isolinux/txt.cfg&lt;/code&gt; permissions for editing:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;chmod 755 ubuntu_files/isolinux ubuntu_files/isolinux/txt.cfg ubuntu_files/isolinux/isolinux.cfg
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Now we need to make the installer read Kickstart and Preseed files by including new menu selection for automatic Ubuntu installation. To do this edit &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;txt.cfg&lt;/code&gt; in &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;isolinux&lt;/code&gt; folder:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;nano ubuntu_files/isolinux/txt.cfg
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Paste the following content right after the line containing &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;default install&lt;/code&gt;:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;label autoinstall
+  menu label ^Automatically install Ubuntu
+  kernel /install/vmlinuz
+  append file=/cdrom/preseed/ubuntu-server.seed vga=788 initrd=/install/initrd.gz ks=cdrom:/ks.cfg preseed/file=/cdrom/ubuntu-auto.seed quiet --
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Set timeout to start the installation automatically:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sed -i -r 's/timeout\s+[0-9]+/timeout 3/g' ubuntu_files/isolinux/isolinux.cfg
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Warning! This command will start installation proccess immediately and format the hard drive as defined in &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ks.cfg&lt;/code&gt;. Skip it if you want to manually start the process after booting into ISO.&lt;/p&gt;
+
+&lt;p&gt;Change the permissions back:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;chmod 555 ubuntu_files/isolinux
+chmod 444 ubuntu_files/isolinux/txt.cfg ubuntu_files/isolinux/isolinux.cfg
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;6-recreate-iso-image&quot;&gt;6. Recreate ISO image&lt;/h3&gt;
+&lt;p&gt;Create new &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;.iso&lt;/code&gt;:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo mkisofs -D -r -V &quot;ubuntu-auto&quot; -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -input-charset utf-8 -cache-inodes -quiet -o ubuntu-auto.iso ubuntu_files/
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Remove files:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo rm -rf ubuntu_files
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;7-optional--create-bootable-usb-media&quot;&gt;7. Optional – Create bootable USB media&lt;/h3&gt;
+&lt;p&gt;Make the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;.iso&lt;/code&gt; file bootable from external USB devices:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo apt-get install syslinux-utils
+sudo isohybrid ubuntu-auto.iso
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Plug in USB device and determine the path to it:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;lsblk
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;My USB device was identified as &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/dev/sdb&lt;/code&gt;. Unmount the media:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo umount /dev/sdb
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Copy ISO to USB device. Make sure to copy directly to the drive, not the first partition (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/dev/sdb&lt;/code&gt;&lt;del&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;1&lt;/code&gt;&lt;/del&gt;)&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo dd if=ubuntu-auto.iso of=/dev/sdb bs=4M &amp;amp;&amp;amp; sync
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;8-known-issues&quot;&gt;8. Known Issues&lt;/h3&gt;
+&lt;p&gt;8.1. USB doesn’t mount as CD-ROM
+Error message:
+“Your installation CD-ROM couldn’t be mounted. This probably means that the CD-ROM was not in the drive. If so you can insert it and try again.”&lt;/p&gt;
+
+&lt;p&gt;Fix: Use dd to create bootable USB. Previuosly this error was caused by Ubuntu Startup Disk Creator.&lt;/p&gt;</content><author><name>Ernestas Narmontas</name><email>ernestasn@pm.me</email></author><category term="linux" /><category term="ubuntu" /><category term="automation" /><summary type="html"></summary></entry></feed>

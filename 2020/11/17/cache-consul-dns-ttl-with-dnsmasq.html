@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>Cache Consul DNS TTL With Dnsmasq | Ernestas Narmontas</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Cache Consul DNS TTL With Dnsmasq" />
+<meta name="author" content="Ernestas Narmontas" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="While testing Consul DNS caching, I have noticed that Dnsmasq does not cache Consul responses. If you are also using Dnsmasq to forward DNS queries to Consul, you may run into the same issue. This guide will walk though all required steps to enable Consul DNS TTL cache with Dnsmasq." />
+<meta property="og:description" content="While testing Consul DNS caching, I have noticed that Dnsmasq does not cache Consul responses. If you are also using Dnsmasq to forward DNS queries to Consul, you may run into the same issue. This guide will walk though all required steps to enable Consul DNS TTL cache with Dnsmasq." />
+<link rel="canonical" href="https://ernestas.me/2020/11/17/cache-consul-dns-ttl-with-dnsmasq" />
+<meta property="og:url" content="https://ernestas.me/2020/11/17/cache-consul-dns-ttl-with-dnsmasq" />
+<meta property="og:site_name" content="Ernestas Narmontas" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-11-17T00:00:00+00:00" />
+<script type="application/ld+json">
+{"description":"While testing Consul DNS caching, I have noticed that Dnsmasq does not cache Consul responses. If you are also using Dnsmasq to forward DNS queries to Consul, you may run into the same issue. This guide will walk though all required steps to enable Consul DNS TTL cache with Dnsmasq.","url":"https://ernestas.me/2020/11/17/cache-consul-dns-ttl-with-dnsmasq","@type":"BlogPosting","author":{"@type":"Person","name":"Ernestas Narmontas"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://ernestas.me/2020/11/17/cache-consul-dns-ttl-with-dnsmasq"},"headline":"Cache Consul DNS TTL With Dnsmasq","dateModified":"2020-11-17T00:00:00+00:00","datePublished":"2020-11-17T00:00:00+00:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+
+  <!-- RSS -->
+  <link type="application/atom+xml" rel="alternate" href="https://ernestas.me/feed.xml" title="Ernestas Narmontas" />
+
+  <!-- Google Analytics-->
+  
+
+    <!-- Google Analytics -->
+    <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-59118080-2', 'auto');
+	ga('send', 'pageview', { 'page': location.pathname + location.search + location.hash});
+	ga('set', 'anonymizeIp', false);
+    </script>
+    <!-- End Google Analytics -->
+    </head>
+
+
+  <body>
+
+    <nav class="nav">
+  <div class="nav-container">
+    <a href="/">
+      <h2 class="nav-title">Ernestas Narmontas</h2>
+    </a>
+    <ul>
+      <li><a href="/">Posts</a></li>
+      <li><a href="/about">About</a></li>
+      <li><a href="https://twitter.com/narmontase">Twitter</a></li>
+    </ul>
+  </div>
+</nav>
+
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    
+    <span>Written by</span>
+    
+        Ernestas Narmontas
+    
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2020-11-17 00:00:00 +0000">November 17, 2020</time>
+    
+  </div>
+
+  <h1 class="post-title">Cache Consul DNS TTL With Dnsmasq</h1>
+  <div class="post-line"></div>
+
+  <p>While testing <a href="https://learn.hashicorp.com/tutorials/consul/dns-caching">Consul DNS caching</a>,
+I have noticed that Dnsmasq does not cache Consul responses. If you are also using
+<a href="https://learn.hashicorp.com/tutorials/consul/dns-forwarding#dnsmasq-setup">Dnsmasq to forward DNS</a>
+queries to Consul, you may run into the same issue.
+This guide will walk though all required steps to enable Consul DNS TTL cache with Dnsmasq.</p>
+
+<h2 id="tldr">TL;DR</h2>
+<p><strong>Problem</strong>: Dnsmasq won’t cache responses from non recursive name servers.
+Consul refuses recursive queries without recursor configuration.</p>
+
+<p><strong>Solution</strong>: Configure fake <a href="https://www.consul.io/docs/agent/options.html#recursors">recursor</a>
+in Consul by adding <code class="language-plaintext highlighter-rouge">"recursors": [ "127.0.0.2" ]</code> to <code class="language-plaintext highlighter-rouge">/etc/consul/consul.json</code>.</p>
+
+<h2 id="detailed">Detailed</h2>
+
+<h3 id="enable-consul-dns-caching">Enable Consul DNS Caching</h3>
+
+<p>Edit <code class="language-plaintext highlighter-rouge">/etc/consul/consul.json</code> and add the config below.
+It should enable TTL values of 1 minute for all services and nodes, 5 minutes for test service.
+You can replace it with any other service you prefer.</p>
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"dns_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"service_ttl"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"*"</span><span class="p">:</span><span class="w"> </span><span class="s2">"60s"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"test"</span><span class="p">:</span><span class="w"> </span><span class="s2">"5m"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nl">"node_ttl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"60s"</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Reload Consul with <code class="language-plaintext highlighter-rouge">consul reload</code>.\</p>
+
+<p>Verify Consul returns DNS response with TTL value. Note the Consul DNS port <code class="language-plaintext highlighter-rouge">8600</code>.</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>dig +nocmd +noall +answer test.service.consul @127.0.0.1 <span class="nt">-p</span> 8600
+test.service.consul.	300	IN	A	10.135.205.232
+test.service.consul.	300	IN	A	10.135.174.59
+</code></pre></div></div>
+
+<p>We can see that Consul DNS cache is working, we have <code class="language-plaintext highlighter-rouge">300</code> seconds TTL in the second column for
+test service.<br />
+Now that Consul is responding with TTL values, we need to cache them on client level.
+That’s where Dnsmasq comes in.</p>
+
+<h3 id="enable-dnsmasq-caching">Enable Dnsmasq Caching</h3>
+
+<p>We use Dnsmasq for forwarding client DNS requests to Consul.
+It also forwards non Consul requests to other DNS servers. We need to enable caching for Dnsmasq,
+in order to cache Consul replies with TTL.</p>
+
+<p>Edit Dnsmasq config file <code class="language-plaintext highlighter-rouge">/etc/dnsmasq.conf</code> and add/uncomment <code class="language-plaintext highlighter-rouge">cache-size</code> parameter
+(change <code class="language-plaintext highlighter-rouge">150</code> to the size you need, but for this example it’s enough):</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cache-size<span class="o">=</span>150
+</code></pre></div></div>
+
+<p>Also, enable logging so we can check which records Dnsmasq cached:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>log-facility<span class="o">=</span>/var/log/dnsmasq.log
+log-queries
+</code></pre></div></div>
+
+<p>Restart Dnsmasq service:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>systemctl restart dnsmasq
+</code></pre></div></div>
+
+<p>Follow Dnsmasq logs:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">tail</span> <span class="nt">-f</span> /var/log/dnsmasq.log | <span class="nb">grep </span>cached
+</code></pre></div></div>
+
+<p>Verify that Dnsmasq caches requested domains. Note the Dnsmasq DNS port <code class="language-plaintext highlighter-rouge">53</code>.<br />
+First response should contain the IP address and TTL value in the second column.</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>dig +nocmd +noall +answer google.com @127.0.0.1 <span class="nt">-p</span> 53
+google.com.		118	IN	A	216.58.206.78
+</code></pre></div></div>
+
+<p>Second response should show lower TTL if the cache is working:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>dig +nocmd +noall +answer google.com @127.0.0.1 <span class="nt">-p</span> 53
+google.com.		114	IN	A	216.58.206.78
+</code></pre></div></div>
+
+<p>After the second command, you should also see in Dnsmasq logs that cached response was returned
+for <code class="language-plaintext highlighter-rouge">google.com</code>:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Nov 16 20:49:04 dnsmasq[22925]: cached google.com is 216.58.206.78
+</code></pre></div></div>
+
+<h3 id="problem">Problem</h3>
+
+<p>Dnsmasq doesn’t cache Consul domain records. No matter how many times I lookup the address,
+TTL doesn’t seem to change. Dnsmasq logs are also not showing any cached responses for
+<code class="language-plaintext highlighter-rouge">.consul</code> domain.</p>
+
+<p>After some head banging I found out the answer
+<a href="https://discuss.hashicorp.com/t/dnsmasq-problem-caching-responses-from-consul/14673">here</a>.
+Turns out Dnsmasq won’t cache responses from non recursive name servers.
+Consul refuses recursive queries without recursor configuration.
+From Dnsmasq <a href="http://www.thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html">man page</a>:</p>
+
+<blockquote>
+  <p>Dnsmasq accepts DNS queries and either answers them from a small, local,
+  cache or forwards them to a real, recursive, DNS server.</p>
+</blockquote>
+
+<p>Here is the <a href="https://github.com/imp/dnsmasq/blob/4e7694d7107d2299f4aaededf8917fceb5dfb924/src/rfc1035.c#L847-L857">source code</a>
+for caching in Dnsmasq:</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Don't put stuff from a truncated packet into the cache.
+   Don't cache replies from non-recursive nameservers, since we may get a
+   reply containing a CNAME but not its target, even though the target
+   does exist. */</span>
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="n">header</span><span class="o">-&gt;</span><span class="n">hb3</span> <span class="o">&amp;</span> <span class="n">HB3_TC</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
+    <span class="o">!</span><span class="p">(</span><span class="n">header</span><span class="o">-&gt;</span><span class="n">hb4</span> <span class="o">&amp;</span> <span class="n">HB4_CD</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
+    <span class="p">(</span><span class="n">header</span><span class="o">-&gt;</span><span class="n">hb4</span> <span class="o">&amp;</span> <span class="n">HB4_RA</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
+    <span class="o">!</span><span class="n">no_cache_dnssec</span><span class="p">)</span>
+  <span class="n">cache_end_insert</span><span class="p">();</span>
+
+<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</code></pre></div></div>
+
+<h3 id="solution">Solution</h3>
+
+<p>Configure dummy <a href="https://www.consul.io/docs/agent/options.html#recursors">recursor</a> in Consul.<br />
+Edit <code class="language-plaintext highlighter-rouge">/etc/consul/consul.json</code> and add <code class="language-plaintext highlighter-rouge">recursors</code> entry with dead address (in your environment):</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"recursors"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">"127.0.0.2"</span><span class="w"> </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>After <code class="language-plaintext highlighter-rouge">consul reload</code> Dnsmasq should cache responses from <code class="language-plaintext highlighter-rouge">.consul</code> domain.</p>
+
+<p>First query:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>dig +nocmd +noall +answer test.service.consul @127.0.0.1 <span class="nt">-p</span> 53
+test.service.consul.	300	IN	A	10.135.205.232
+test.service.consul.	300	IN	A	10.135.174.59
+</code></pre></div></div>
+
+<p>Second query:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>dig +nocmd +noall +answer test.service.consul @127.0.0.1 <span class="nt">-p</span> 53
+test.service.consul.	297	IN	A	10.135.174.59
+test.service.consul.	297	IN	A	10.135.205.232
+</code></pre></div></div>
+
+<p>Dnsmasq log:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Nov 16 20:49:04 dnsmasq[22925]: cached google.com is 216.58.206.78
+Nov 16 21:53:49 dnsmasq[22925]: cached test.service.consul is 10.135.174.59
+Nov 16 21:53:49 dnsmasq[22925]: cached test.service.consul is 10.135.205.232
+</code></pre></div></div>
+<hr />
+<p><strong>Note</strong></p>
+
+<p>If any of your servers will send a request to Consul DNS server for non <code class="language-plaintext highlighter-rouge">.consul</code> domain, Consul will try to forward it to non existing recursor. By default, it will time out in 2s, but you can adjust that setting with <code class="language-plaintext highlighter-rouge">recursor_timeout</code> option and set to lower value.</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"dns_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"recursor_timeout"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1ms"</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+
+  
+    <p>If you liked this article please follow me on <a href="https://twitter.com/narmontase">Twitter</a> for similar content.</p>
+  
+</div>
+
+
+  <section class="comments" id="comment-section">
+  <hr>
+  
+
+  <!-- New comment form -->
+  <div id="respond" class="comment__new">
+    <form class="js-form form" method="post" action="https://ernestas-me-staticman.herokuapp.com/v2/entry/enarmontas/enarmontas.github.io/master/comments">
+  <input type="hidden" name="options[origin]" value="https://ernestas.me/2020/11/17/cache-consul-dns-ttl-with-dnsmasq">
+  <input type="hidden" name="options[parent]" value="https://ernestas.me/2020/11/17/cache-consul-dns-ttl-with-dnsmasq">
+  <input type="hidden" id="comment-replying-to-uid" name="fields[replying_to_uid]" value="">
+  <input type="hidden" name="options[slug]" value="cache-consul-dns-ttl-with-dnsmasq">
+  <input type="hidden" name="options[reCaptcha][siteKey]" value="6LfbfUsaAAAAAGjuUw-KsmEs2JKV8t3KlTQ5LyII">
+  <input type="hidden" name="options[reCaptcha][secret]"  value="scqYdckWe41ee8flMwhE2Uaeyf88VsD2p/Z/qjG4LPkw5WI3U+o2pZ6ga9Lg1Q+E3QYW0ZRSZy0shOc9Z0kPkMRtTvD4pMoUZxEDtKth6MpMTMpivlvvKA6YW5vdkaf3GFR2/iX2yXEksMET5UzpkDYm41O3GU9NH61kaiWGZjHMI20WViXj2Xyb9nqvYRabwLusoLBF+K01eWQB5dXsVYMNH4wV7VWvMhlwS1pjRbNgK349AQ6xzBtKag6PYrvZvVn7LVEgTtcXxPrOgaihpsTMHLtPhfE77ucbg9+MNNIVmBs7TzkdjsW0iLqbzG1nIVpq23y8Q/iU7AbEufQJ1E2SZb7fH5DOKQ6eg6O/ZmFzUURVNAMXh5kCOQJeG0oO7us7b/w7sYFgkkvT5d6x/aYUZ4lhRuntBpo8BHjMrwYgiD8wOlbZW8xoT99BfVdspiu+24KHuFDNv4MqQbDotckF+T9R/mIXkiO6rdE6yrBofoBB3use7l4l1FQ+XJUxmQ0Zr5YVCrhy0QbBxggfeBMo1UxSFsOkmjnRw+4E8mZjWEezIlY85eP4XFn31q7w9nomg8kU+xpYeTnpcTQDcbiRkg/AK8UU3zP33Jh/WvQzUAwRlutQfJs6lXEdgY26MTX56TXej/unDekDlwsHZVMHCK0OjTelAsyHsk0Vqeo=">
+
+  <div class="textfield">
+    <label for="comment-form-message"><h2>Add Comment<small><a rel="nofollow" id="cancel-comment-reply-link" href="https://ernestas.me/2020/11/17/cache-consul-dns-ttl-with-dnsmasq#respond" style="display:none;">(cancel reply)</a></small></h2>
+      <textarea class="textfield__input" name="fields[message]" type="text" id="comment-form-message" placeholder="Your comment (markdown accepted)" required rows="6"></textarea>
+    </label>
+  </div>
+
+    <div class="textfield narrowfield">
+      <label for="comment-form-name">Name
+        <input class="textfield__input" name="fields[name]" type="text" id="comment-form-name" placeholder="Your name (required)" required/>
+      </label>
+    </div>
+
+    <div class="textfield narrowfield">
+      <label for="comment-form-email">E-mail
+        <input class="textfield__input" name="fields[email]" type="email" id="comment-form-email" placeholder="Your email (optional)"/>
+      </label>
+    </div>
+
+    <div class="textfield narrowfield hp">
+      <label for="hp">
+        <input class="textfield__input" name="fields[hp]" id="hp" type="text" placeholder="Leave blank">
+      </label>
+    </div>
+
+    <div id="reCaptcha" class="g-recaptcha" data-sitekey="6LfbfUsaAAAAAGjuUw-KsmEs2JKV8t3KlTQ5LyII"></div>
+
+    <button class="button" id="comment-form-submit">
+      Submit
+    </button>
+
+</form>
+
+<article class="modal mdl-card mdl-shadow--2dp">
+  <div>
+    <h3 class="modal-title js-modal-title"></h3>
+  </div>
+  <div class="mdl-card__supporting-text js-modal-text"></div>
+  <div class="mdl-card__actions mdl-card--border">
+    <button class="button mdl-button--colored mdl-js-button mdl-js-ripple-effect js-close-modal">Close</button>
+  </div>
+</article>
+
+  </div>
+</section>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="/assets/js/static-comments.js"></script>
+<script src="https://www.google.com/recaptcha/api.js"></script>
+
+
+
+<div class="pagination">
+  
+    <a href="/2021/03/08/function-over-form-mounting-external-ssd-on-macbook" class="left arrow">&#8592;</a>
+  
+  
+    <a href="/2020/09/25/my-curated-list-of-sre-and-devops-resources" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+  <span>
+    &copy; <time datetime="2021-07-13 11:03:50 +0000">2021</time> Ernestas Narmontas. Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme.
+  </span>
+</footer>
+
+  </body>
+</html>

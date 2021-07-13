@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>Upgrading HP Aruba Switch Firmware | Ernestas Narmontas</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Upgrading HP Aruba Switch Firmware" />
+<meta name="author" content="Ernestas Narmontas" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Personal Blog" />
+<meta property="og:description" content="Personal Blog" />
+<link rel="canonical" href="https://ernestas.me/2017/11/21/upgrading-hp-aruba-switch-firmware" />
+<meta property="og:url" content="https://ernestas.me/2017/11/21/upgrading-hp-aruba-switch-firmware" />
+<meta property="og:site_name" content="Ernestas Narmontas" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2017-11-21T00:00:00+00:00" />
+<script type="application/ld+json">
+{"description":"Personal Blog","url":"https://ernestas.me/2017/11/21/upgrading-hp-aruba-switch-firmware","@type":"BlogPosting","author":{"@type":"Person","name":"Ernestas Narmontas"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://ernestas.me/2017/11/21/upgrading-hp-aruba-switch-firmware"},"headline":"Upgrading HP Aruba Switch Firmware","dateModified":"2017-11-21T00:00:00+00:00","datePublished":"2017-11-21T00:00:00+00:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+
+  <!-- RSS -->
+  <link type="application/atom+xml" rel="alternate" href="https://ernestas.me/feed.xml" title="Ernestas Narmontas" />
+
+  <!-- Google Analytics-->
+  
+
+    <!-- Google Analytics -->
+    <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-59118080-2', 'auto');
+	ga('send', 'pageview', { 'page': location.pathname + location.search + location.hash});
+	ga('set', 'anonymizeIp', false);
+    </script>
+    <!-- End Google Analytics -->
+    </head>
+
+
+  <body>
+
+    <nav class="nav">
+  <div class="nav-container">
+    <a href="/">
+      <h2 class="nav-title">Ernestas Narmontas</h2>
+    </a>
+    <ul>
+      <li><a href="/">Posts</a></li>
+      <li><a href="/about">About</a></li>
+      <li><a href="https://twitter.com/narmontase">Twitter</a></li>
+    </ul>
+  </div>
+</nav>
+
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    
+    <span>Written by</span>
+    
+        Ernestas Narmontas
+    
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2017-11-21 00:00:00 +0000">November 21, 2017</time>
+    
+  </div>
+
+  <h1 class="post-title">Upgrading HP Aruba Switch Firmware</h1>
+  <div class="post-line"></div>
+
+  <p><img src="/assets/images/2017/aruba_1.jpg" alt="HP Aruba" /></p>
+
+<p>Guide for upgrading HP Aruba (formerly ProCurve) switch firmware.</p>
+
+<h3 id="requirements">Requirements</h3>
+<ul>
+  <li>macOS</li>
+  <li>HP Aruba Switch</li>
+</ul>
+
+<h3 id="1-start-built-in-tftp-server-on-your-mac">1. Start built-in <code class="language-plaintext highlighter-rouge">tftp</code> server on your Mac</h3>
+<p><code class="language-plaintext highlighter-rouge">tftp</code> server will enable file transfers between macOS and Aruba switch.</p>
+
+<p>Run the following command in Terminal:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo launchctl load -F /System/Library/LaunchDaemons/tftp.plist
+</code></pre></div></div>
+
+<p>Symlink <code class="language-plaintext highlighter-rouge">tftp</code> source folder to some other folder in your home directory that you have full control over:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo rm -rf /private/tftpboot
+mkdir /Users/username/tftpboot
+sudo ln -s /Users/username/tftpboot /private/tftpboot
+</code></pre></div></div>
+
+<p>Restart <code class="language-plaintext highlighter-rouge">tftp</code> server for changes to take effect:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo launchctl unload -F /System/Library/LaunchDaemons/tftp.plist
+sudo launchctl load -F /System/Library/LaunchDaemons/tftp.plist
+</code></pre></div></div>
+
+<h3 id="2-backup-current-switch-configuration">2. Backup current switch configuration</h3>
+<p>Before downloading configuration from switch, you have to create empty file and give proper permissions so your switch can write the configuration over it.</p>
+
+<p>Create config file:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cd /Users/username/tftpboot
+touch switch.conf
+chmod 766 switch.conf
+</code></pre></div></div>
+
+<p>Save startup configuration to file:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>write memory
+copy startup-config tftp 192.168.100.100 switch.conf
+</code></pre></div></div>
+
+<p>Don’t forget to change the permissions back after successful file transfer.</p>
+
+<h3 id="3-check-current-firmware-version">3. Check current firmware version</h3>
+<p>In this example, <code class="language-plaintext highlighter-rouge">WB.16.02.0012</code> firmware uses <code class="language-plaintext highlighter-rouge">WB.16.03</code> boot ROM. It is upgraded automatically from the firmware image to the version that is required.
+Make sure that you are upgrading from supported version. Sometimes you may need to install incremented backups to keep the configuration intact.</p>
+
+<p>Check current flash:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>HP-2920# show flash
+Image             Size (bytes) Date     Version
+----------------- ------------ -------- --------------
+Primary Image    :    14233321 01/26/17 WB.16.02.0012
+Secondary Image  :    14233321 01/26/17 WB.16.02.0012
+
+Boot ROM Version : WB.16.03
+Default Boot     : Primary
+</code></pre></div></div>
+
+<h3 id="4-download-the-latest-firmware-from-hp">4. Download the latest firmware from HP</h3>
+<p>Open <a href="https://h10145.www1.hp.com/downloads/ProductsList.aspx?smp=1">this</a> link and type in your product name to download the newest firmware image. In this example for <a href="https://h10145.www1.hp.com/downloads/SoftwareReleases.aspx?ProductNumber=J9726A&amp;lang=&amp;cc=&amp;prodSeriesId=">Aruba 2920 24G Switch</a> it’s <code class="language-plaintext highlighter-rouge">WB_16_04_0009.swi</code></p>
+
+<p>Copy downloaded firmware to your <code class="language-plaintext highlighter-rouge">tftp</code> folder:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cp Downloads/WB_16_04_0009.swi /Users/username/tftpboot
+</code></pre></div></div>
+
+<h3 id="5-upload-and-flash-the-firmware-on-secondary-image">5. Upload and flash the firmware on secondary image</h3>
+<p>Primary Image: Default storage for switch software image.</p>
+
+<p>Secondary Image: Additional storage for either a redundant or an alternate switch software image.</p>
+
+<p>With the Primary/Secondary flash option, you can test a new image in your system without having to replace a previously existing image.
+It is recommended to upgrade secondary image while booted into primary and after the upgrade boot into secondary to test if everything works well.<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote">1</a></sup></p>
+
+<p>Copy firmware to the secondary image:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>copy tftp flash 192.168.100.100 WB_16_04_0009.swi secondary
+</code></pre></div></div>
+
+<p>You should see “The Secondary OS Image will be deleted, continue [y/n]?”. Respond to the warning message by pressing <code class="language-plaintext highlighter-rouge">y</code>.</p>
+
+<p>Now you should see “Validating and Writing System Software to Flash…”</p>
+
+<p>Wait for the process to finish and reboot the switch to the new firmware:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>boot system flash secondary
+</code></pre></div></div>
+
+<p>Check if everything is working well and no configuration is lost with the new firmware.</p>
+
+<h3 id="6-upload-and-flash-the-firmware-on-primary-image">6. Upload and flash the firmware on primary image</h3>
+<p>Repeat the same commands from Step 5, using primary instead of secondary.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>copy tftp flash 192.168.100.100 WB_16_04_0009.swi primary
+boot system flash primary
+</code></pre></div></div>
+
+<h3 id="7-validate-the-new-firmware-versions">7. Validate the new firmware versions</h3>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>HP-2920# sh flash
+Image             Size (bytes) Date     Version
+----------------- ------------ -------- --------------
+Primary Image    :    16495314 10/13/17 WB.16.04.0009        
+Secondary Image  :    16495314 10/13/17 WB.16.04.0009       
+
+Boot ROM Version
+----------------
+Primary Boot ROM Version   : WB.16.03
+Secondary Boot ROM Version : WB.16.03
+
+Default Boot Image   : Primary
+Default Boot ROM     : Primary
+</code></pre></div></div>
+
+<p>The system has been updated to the newest version!</p>
+
+<div class="footnotes" role="doc-endnotes">
+  <ol>
+    <li id="fn:1" role="doc-endnote">
+      <p><a href="http://h22208.www2.hpe.com/eginfolib/networking/docs/switches/common/15-18/5998-8158_bog/content/ch04s07.html">Using Primary and Secondary flash image options on HP</a> <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+
+  
+    <p>If you liked this article please follow me on <a href="https://twitter.com/narmontase">Twitter</a> for similar content.</p>
+  
+</div>
+
+
+  <section class="comments" id="comment-section">
+  <hr>
+  
+
+  <!-- New comment form -->
+  <div id="respond" class="comment__new">
+    <form class="js-form form" method="post" action="https://ernestas-me-staticman.herokuapp.com/v2/entry/enarmontas/enarmontas.github.io/master/comments">
+  <input type="hidden" name="options[origin]" value="https://ernestas.me/2017/11/21/upgrading-hp-aruba-switch-firmware">
+  <input type="hidden" name="options[parent]" value="https://ernestas.me/2017/11/21/upgrading-hp-aruba-switch-firmware">
+  <input type="hidden" id="comment-replying-to-uid" name="fields[replying_to_uid]" value="">
+  <input type="hidden" name="options[slug]" value="upgrading-hp-aruba-switch-firmware">
+  <input type="hidden" name="options[reCaptcha][siteKey]" value="6LfbfUsaAAAAAGjuUw-KsmEs2JKV8t3KlTQ5LyII">
+  <input type="hidden" name="options[reCaptcha][secret]"  value="scqYdckWe41ee8flMwhE2Uaeyf88VsD2p/Z/qjG4LPkw5WI3U+o2pZ6ga9Lg1Q+E3QYW0ZRSZy0shOc9Z0kPkMRtTvD4pMoUZxEDtKth6MpMTMpivlvvKA6YW5vdkaf3GFR2/iX2yXEksMET5UzpkDYm41O3GU9NH61kaiWGZjHMI20WViXj2Xyb9nqvYRabwLusoLBF+K01eWQB5dXsVYMNH4wV7VWvMhlwS1pjRbNgK349AQ6xzBtKag6PYrvZvVn7LVEgTtcXxPrOgaihpsTMHLtPhfE77ucbg9+MNNIVmBs7TzkdjsW0iLqbzG1nIVpq23y8Q/iU7AbEufQJ1E2SZb7fH5DOKQ6eg6O/ZmFzUURVNAMXh5kCOQJeG0oO7us7b/w7sYFgkkvT5d6x/aYUZ4lhRuntBpo8BHjMrwYgiD8wOlbZW8xoT99BfVdspiu+24KHuFDNv4MqQbDotckF+T9R/mIXkiO6rdE6yrBofoBB3use7l4l1FQ+XJUxmQ0Zr5YVCrhy0QbBxggfeBMo1UxSFsOkmjnRw+4E8mZjWEezIlY85eP4XFn31q7w9nomg8kU+xpYeTnpcTQDcbiRkg/AK8UU3zP33Jh/WvQzUAwRlutQfJs6lXEdgY26MTX56TXej/unDekDlwsHZVMHCK0OjTelAsyHsk0Vqeo=">
+
+  <div class="textfield">
+    <label for="comment-form-message"><h2>Add Comment<small><a rel="nofollow" id="cancel-comment-reply-link" href="https://ernestas.me/2017/11/21/upgrading-hp-aruba-switch-firmware#respond" style="display:none;">(cancel reply)</a></small></h2>
+      <textarea class="textfield__input" name="fields[message]" type="text" id="comment-form-message" placeholder="Your comment (markdown accepted)" required rows="6"></textarea>
+    </label>
+  </div>
+
+    <div class="textfield narrowfield">
+      <label for="comment-form-name">Name
+        <input class="textfield__input" name="fields[name]" type="text" id="comment-form-name" placeholder="Your name (required)" required/>
+      </label>
+    </div>
+
+    <div class="textfield narrowfield">
+      <label for="comment-form-email">E-mail
+        <input class="textfield__input" name="fields[email]" type="email" id="comment-form-email" placeholder="Your email (optional)"/>
+      </label>
+    </div>
+
+    <div class="textfield narrowfield hp">
+      <label for="hp">
+        <input class="textfield__input" name="fields[hp]" id="hp" type="text" placeholder="Leave blank">
+      </label>
+    </div>
+
+    <div id="reCaptcha" class="g-recaptcha" data-sitekey="6LfbfUsaAAAAAGjuUw-KsmEs2JKV8t3KlTQ5LyII"></div>
+
+    <button class="button" id="comment-form-submit">
+      Submit
+    </button>
+
+</form>
+
+<article class="modal mdl-card mdl-shadow--2dp">
+  <div>
+    <h3 class="modal-title js-modal-title"></h3>
+  </div>
+  <div class="mdl-card__supporting-text js-modal-text"></div>
+  <div class="mdl-card__actions mdl-card--border">
+    <button class="button mdl-button--colored mdl-js-button mdl-js-ripple-effect js-close-modal">Close</button>
+  </div>
+</article>
+
+  </div>
+</section>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="/assets/js/static-comments.js"></script>
+<script src="https://www.google.com/recaptcha/api.js"></script>
+
+
+
+<div class="pagination">
+  
+    <a href="/2020/07/09/hello-world-v2" class="left arrow">&#8592;</a>
+  
+  
+    <a href="/2017/02/12/ubuntu-1604-desktop-unattended-installation" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+  <span>
+    &copy; <time datetime="2021-07-13 11:03:50 +0000">2021</time> Ernestas Narmontas. Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme.
+  </span>
+</footer>
+
+  </body>
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>Storing Terraform State in Consul | Ernestas Narmontas</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Storing Terraform State in Consul" />
+<meta name="author" content="Ernestas Narmontas" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="I was impressed that Terraform performs better with Consul backend instead of S3/DynamoDB." />
+<meta property="og:description" content="I was impressed that Terraform performs better with Consul backend instead of S3/DynamoDB." />
+<link rel="canonical" href="https://ernestas.me/2021/05/03/storing-terraform-state-in-consul" />
+<meta property="og:url" content="https://ernestas.me/2021/05/03/storing-terraform-state-in-consul" />
+<meta property="og:site_name" content="Ernestas Narmontas" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2021-05-03T00:00:00+00:00" />
+<script type="application/ld+json">
+{"description":"I was impressed that Terraform performs better with Consul backend instead of S3/DynamoDB.","url":"https://ernestas.me/2021/05/03/storing-terraform-state-in-consul","@type":"BlogPosting","author":{"@type":"Person","name":"Ernestas Narmontas"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://ernestas.me/2021/05/03/storing-terraform-state-in-consul"},"headline":"Storing Terraform State in Consul","dateModified":"2021-05-03T00:00:00+00:00","datePublished":"2021-05-03T00:00:00+00:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+
+  <!-- RSS -->
+  <link type="application/atom+xml" rel="alternate" href="https://ernestas.me/feed.xml" title="Ernestas Narmontas" />
+
+  <!-- Google Analytics-->
+  
+
+    <!-- Google Analytics -->
+    <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-59118080-2', 'auto');
+	ga('send', 'pageview', { 'page': location.pathname + location.search + location.hash});
+	ga('set', 'anonymizeIp', false);
+    </script>
+    <!-- End Google Analytics -->
+    </head>
+
+
+  <body>
+
+    <nav class="nav">
+  <div class="nav-container">
+    <a href="/">
+      <h2 class="nav-title">Ernestas Narmontas</h2>
+    </a>
+    <ul>
+      <li><a href="/">Posts</a></li>
+      <li><a href="/about">About</a></li>
+      <li><a href="https://twitter.com/narmontase">Twitter</a></li>
+    </ul>
+  </div>
+</nav>
+
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    
+    <span>Written by</span>
+    
+        Ernestas Narmontas
+    
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2021-05-03 00:00:00 +0000">May 03, 2021</time>
+    
+  </div>
+
+  <h1 class="post-title">Storing Terraform State in Consul</h1>
+  <div class="post-line"></div>
+
+  <p>I was impressed that Terraform performs better with Consul backend instead of S3/DynamoDB.</p>
+
+<p>HashiCorp products integrate seamlessly with each other, so storing Terraform state in a
+Consul cluster is very easy. Just  create a policy, token and define the Terraform backend.</p>
+
+<p>Here are the steps.</p>
+
+<h3 id="create-consul-policy">Create Consul Policy</h3>
+
+<p>Example <code class="language-plaintext highlighter-rouge">policy.json</code>:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"Name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"terraform-state"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"Description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Grants required permissions to store Terraform state"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"Rules"</span><span class="p">:</span><span class="w"> </span><span class="s2">"session_prefix </span><span class="se">\"\"</span><span class="s2"> { policy = </span><span class="se">\"</span><span class="s2">write</span><span class="se">\"</span><span class="s2">}, key_prefix </span><span class="se">\"</span><span class="s2">terraform-state/</span><span class="se">\"</span><span class="s2"> { policy = </span><span class="se">\"</span><span class="s2">write</span><span class="se">\"</span><span class="s2">}"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"Datacenters"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"dc1"</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Note: Key prefix is target location in Consul.
+Session prefix is required for locking Terraform state in Consul.</p>
+
+<p>Create example policy:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-X</span> PUT <span class="nt">--data</span> @policy.json <span class="se">\</span>
+  <span class="nt">-H</span> <span class="s2">"X-Consul-Token: </span><span class="nv">$CONSUL_HTTP_TOKEN</span><span class="s2">"</span> http://127.0.0.1:8500/v1/acl/policy
+</code></pre></div></div>
+
+<h3 id="create-consul-token">Create Consul Token</h3>
+
+<p>Example <code class="language-plaintext highlighter-rouge">token.json</code> with <code class="language-plaintext highlighter-rouge">terraform-state</code> policy assigned.</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"Description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Token for Terraform"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"Policies"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"Name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"terraform-state"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nl">"Local"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Create example token:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-X</span> PUT <span class="nt">--data</span> @token.json <span class="se">\</span>
+  <span class="nt">-H</span> <span class="s2">"X-Consul-Token: </span><span class="nv">$CONSUL_HTTP_TOKEN</span><span class="s2">"</span> http://127.0.0.1:8500/v1/acl/token
+</code></pre></div></div>
+
+<p>Set the resulting <code class="language-plaintext highlighter-rouge">secret_id</code> as <code class="language-plaintext highlighter-rouge">CONSUL_HTTP_TOKEN</code> environment variable on the machine
+where Terraform runs.</p>
+
+<h3 id="configure-terraform-backend">Configure Terraform Backend</h3>
+
+<p>Example <code class="language-plaintext highlighter-rouge">backend.tf</code> with custom path for your module:</p>
+
+<div class="language-hcl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">terraform</span> <span class="p">{</span>
+  <span class="nx">backend</span> <span class="s2">"consul"</span> <span class="p">{</span>
+    <span class="nx">address</span> <span class="p">=</span> <span class="s2">"consul.service.consul:8500"</span>
+    <span class="nx">lock</span>    <span class="p">=</span> <span class="kc">true</span>
+    <span class="nx">path</span>    <span class="p">=</span> <span class="s2">"terraform-state/example/terraform.tfstate"</span>
+    <span class="nx">scheme</span>  <span class="p">=</span> <span class="s2">"http"</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>That should do the job!</p>
+
+
+  
+    <p>If you liked this article please follow me on <a href="https://twitter.com/narmontase">Twitter</a> for similar content.</p>
+  
+</div>
+
+
+  <section class="comments" id="comment-section">
+  <hr>
+  
+
+  <!-- New comment form -->
+  <div id="respond" class="comment__new">
+    <form class="js-form form" method="post" action="https://ernestas-me-staticman.herokuapp.com/v2/entry/enarmontas/enarmontas.github.io/master/comments">
+  <input type="hidden" name="options[origin]" value="https://ernestas.me/2021/05/03/storing-terraform-state-in-consul">
+  <input type="hidden" name="options[parent]" value="https://ernestas.me/2021/05/03/storing-terraform-state-in-consul">
+  <input type="hidden" id="comment-replying-to-uid" name="fields[replying_to_uid]" value="">
+  <input type="hidden" name="options[slug]" value="storing-terraform-state-in-consul">
+  <input type="hidden" name="options[reCaptcha][siteKey]" value="6LfbfUsaAAAAAGjuUw-KsmEs2JKV8t3KlTQ5LyII">
+  <input type="hidden" name="options[reCaptcha][secret]"  value="scqYdckWe41ee8flMwhE2Uaeyf88VsD2p/Z/qjG4LPkw5WI3U+o2pZ6ga9Lg1Q+E3QYW0ZRSZy0shOc9Z0kPkMRtTvD4pMoUZxEDtKth6MpMTMpivlvvKA6YW5vdkaf3GFR2/iX2yXEksMET5UzpkDYm41O3GU9NH61kaiWGZjHMI20WViXj2Xyb9nqvYRabwLusoLBF+K01eWQB5dXsVYMNH4wV7VWvMhlwS1pjRbNgK349AQ6xzBtKag6PYrvZvVn7LVEgTtcXxPrOgaihpsTMHLtPhfE77ucbg9+MNNIVmBs7TzkdjsW0iLqbzG1nIVpq23y8Q/iU7AbEufQJ1E2SZb7fH5DOKQ6eg6O/ZmFzUURVNAMXh5kCOQJeG0oO7us7b/w7sYFgkkvT5d6x/aYUZ4lhRuntBpo8BHjMrwYgiD8wOlbZW8xoT99BfVdspiu+24KHuFDNv4MqQbDotckF+T9R/mIXkiO6rdE6yrBofoBB3use7l4l1FQ+XJUxmQ0Zr5YVCrhy0QbBxggfeBMo1UxSFsOkmjnRw+4E8mZjWEezIlY85eP4XFn31q7w9nomg8kU+xpYeTnpcTQDcbiRkg/AK8UU3zP33Jh/WvQzUAwRlutQfJs6lXEdgY26MTX56TXej/unDekDlwsHZVMHCK0OjTelAsyHsk0Vqeo=">
+
+  <div class="textfield">
+    <label for="comment-form-message"><h2>Add Comment<small><a rel="nofollow" id="cancel-comment-reply-link" href="https://ernestas.me/2021/05/03/storing-terraform-state-in-consul#respond" style="display:none;">(cancel reply)</a></small></h2>
+      <textarea class="textfield__input" name="fields[message]" type="text" id="comment-form-message" placeholder="Your comment (markdown accepted)" required rows="6"></textarea>
+    </label>
+  </div>
+
+    <div class="textfield narrowfield">
+      <label for="comment-form-name">Name
+        <input class="textfield__input" name="fields[name]" type="text" id="comment-form-name" placeholder="Your name (required)" required/>
+      </label>
+    </div>
+
+    <div class="textfield narrowfield">
+      <label for="comment-form-email">E-mail
+        <input class="textfield__input" name="fields[email]" type="email" id="comment-form-email" placeholder="Your email (optional)"/>
+      </label>
+    </div>
+
+    <div class="textfield narrowfield hp">
+      <label for="hp">
+        <input class="textfield__input" name="fields[hp]" id="hp" type="text" placeholder="Leave blank">
+      </label>
+    </div>
+
+    <div id="reCaptcha" class="g-recaptcha" data-sitekey="6LfbfUsaAAAAAGjuUw-KsmEs2JKV8t3KlTQ5LyII"></div>
+
+    <button class="button" id="comment-form-submit">
+      Submit
+    </button>
+
+</form>
+
+<article class="modal mdl-card mdl-shadow--2dp">
+  <div>
+    <h3 class="modal-title js-modal-title"></h3>
+  </div>
+  <div class="mdl-card__supporting-text js-modal-text"></div>
+  <div class="mdl-card__actions mdl-card--border">
+    <button class="button mdl-button--colored mdl-js-button mdl-js-ripple-effect js-close-modal">Close</button>
+  </div>
+</article>
+
+  </div>
+</section>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="/assets/js/static-comments.js"></script>
+<script src="https://www.google.com/recaptcha/api.js"></script>
+
+
+
+<div class="pagination">
+  
+  
+    <a href="/2021/04/30/staticman" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+  <span>
+    &copy; <time datetime="2021-07-13 11:03:50 +0000">2021</time> Ernestas Narmontas. Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme.
+  </span>
+</footer>
+
+  </body>
+</html>

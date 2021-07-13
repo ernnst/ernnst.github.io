@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>Ubuntu 14.04 Desktop Unattended Installation | Ernestas Narmontas</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Ubuntu 14.04 Desktop Unattended Installation" />
+<meta name="author" content="Ernestas Narmontas" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Personal Blog" />
+<meta property="og:description" content="Personal Blog" />
+<link rel="canonical" href="https://ernestas.me/2016/01/21/ubuntu-1404-desktop-unattended-installation" />
+<meta property="og:url" content="https://ernestas.me/2016/01/21/ubuntu-1404-desktop-unattended-installation" />
+<meta property="og:site_name" content="Ernestas Narmontas" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2016-01-21T00:00:00+00:00" />
+<script type="application/ld+json">
+{"description":"Personal Blog","url":"https://ernestas.me/2016/01/21/ubuntu-1404-desktop-unattended-installation","@type":"BlogPosting","author":{"@type":"Person","name":"Ernestas Narmontas"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://ernestas.me/2016/01/21/ubuntu-1404-desktop-unattended-installation"},"headline":"Ubuntu 14.04 Desktop Unattended Installation","dateModified":"2016-01-21T00:00:00+00:00","datePublished":"2016-01-21T00:00:00+00:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+
+  <!-- RSS -->
+  <link type="application/atom+xml" rel="alternate" href="https://ernestas.me/feed.xml" title="Ernestas Narmontas" />
+
+  <!-- Google Analytics-->
+  
+
+    <!-- Google Analytics -->
+    <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-59118080-2', 'auto');
+	ga('send', 'pageview', { 'page': location.pathname + location.search + location.hash});
+	ga('set', 'anonymizeIp', false);
+    </script>
+    <!-- End Google Analytics -->
+    </head>
+
+
+  <body>
+
+    <nav class="nav">
+  <div class="nav-container">
+    <a href="/">
+      <h2 class="nav-title">Ernestas Narmontas</h2>
+    </a>
+    <ul>
+      <li><a href="/">Posts</a></li>
+      <li><a href="/about">About</a></li>
+      <li><a href="https://twitter.com/narmontase">Twitter</a></li>
+    </ul>
+  </div>
+</nav>
+
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    
+    <span>Written by</span>
+    
+        Ernestas Narmontas
+    
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2016-01-21 00:00:00 +0000">January 21, 2016</time>
+    
+  </div>
+
+  <h1 class="post-title">Ubuntu 14.04 Desktop Unattended Installation</h1>
+  <div class="post-line"></div>
+
+  <p><img src="/assets/images/2016/ubuntu_1.png" alt="Ubuntu Installation" /></p>
+
+<p>There are two most commonly used methods when it comes to automating Ubuntu installations: Preseed and Kickstart. The first one is an official method for Ubuntu to suppress all the questions in the installation process, but it has really steep learning curve if you are making automatic Ubuntu installer for the first time. Second method is really easy to start with because Ubuntu supports most of the RedHat’s Kickstart options, but since it isn’t an official method, we are still going to use some Preseed commands.</p>
+
+<p>I couldn’t find one tutorial where the whole process would be explained, so I made this fully working and tested<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote">1</a></sup> tutorial for anyone to use.</p>
+
+<p>In this tutorial I am going to create Kickstart and Preseed configuration files, modify original Ubuntu ISO files, save my modified ISO and make USB Startup Disk from it.</p>
+
+<h2 id="1-create-kickstart-configuration-file">1. Create Kickstart Configuration File</h2>
+<p>Install Kickstart by typing this command into Terminal:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo apt-get install system-config-kickstart
+</code></pre></div></div>
+
+<p>After the installation process is completed, open Kickstart Configurator using Unity search or just by typing <code class="language-plaintext highlighter-rouge">system-config-kickstart</code> in Terminal.</p>
+
+<p>When the Kickstart opens, choose the settings you need for your installation. You can review all possible options on the official Kickstart Configurator <a href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/5/html/installation_guide/ch-redhat-config-kickstart">documentation site</a>. Here is the configuration I used:</p>
+
+<p><img src="/assets/images/2016/ubuntu_2.png" alt="Kickstart Configurator" /></p>
+
+<p>Very basic and self explanatory settings here. I used x86 architecture, because my devices had less than 4 GB of RAM.</p>
+
+<p><img src="/assets/images/2016/ubuntu_3.png" alt="Kickstart Configurator" /></p>
+
+<p>If you want to install Ubuntu from CD-ROM or USB like I did, choose CD-ROM. If you want to install it from ISO file stored on FTP, HTTP servers or hard drive, choose appropriate options.</p>
+
+<p><img src="/assets/images/2016/ubuntu_4.png" alt="Kickstart Configurator" /></p>
+
+<p>Keep boot loader options to default.</p>
+
+<p><img src="/assets/images/2016/ubuntu_5.png" alt="Kickstart Configurator" /></p>
+
+<p>Be careful on this step and set the right partitioning information, because it can completely delete your current system. I installed Ubuntu on machines that had the same size HDDs with existing partitions. I just wanted to delete everything.
+Make sure to create <code>/boot</code>, <code>/</code> and <code>swap</code> partitions. In this example the first two partitions are in fixed size and the last one is set to fill all remaining space for <code>swap</code>.</p>
+
+<p><img src="/assets/images/2016/ubuntu_6.png" alt="Kickstart Configurator" /></p>
+
+<p>Choose Static or DHCP.</p>
+
+<p><img src="/assets/images/2016/ubuntu_7.png" alt="Kickstart Configurator" /></p>
+
+<p>Kept the default settings.</p>
+
+<p><img src="/assets/images/2016/ubuntu_8.png" alt="Kickstart Configurator" /></p>
+
+<p>Enter your credentials. You can later change the password in <code>ks.cfg</code> file manually. If you chose to encrypt your password, the supported hash in Kickstart configuration is MD5. Use Open SSL command <code>openssl passwd -1 *yourpassword*</code> in Terminal to generate the new password.</p>
+
+<p><img src="/assets/images/2016/ubuntu_9.png" alt="Kickstart Configurator" /></p>
+
+<p>Keep it disabled. Ubuntu doesn’t support firewall settings.</p>
+
+<p><img src="/assets/images/2016/ubuntu_10.png" alt="Kickstart Configurator" /></p>
+
+<p>Do not configure the X Window System here. Ubuntu automatically solves this one anyway.</p>
+
+<p><img src="/assets/images/2016/ubuntu_11.png" alt="Kickstart Configurator" /></p>
+
+<p>Ubuntu doesn’t support Kickstart package selection. We’ll add them manually to <code>%packages</code> section in <code>ks.cfg</code> file.</p>
+
+<p><img src="/assets/images/2016/ubuntu_12.png" alt="Kickstart Configurator" /></p>
+
+<p>Write anything that you need to do before starting Kickstart installation.</p>
+
+<p><img src="/assets/images/2016/ubuntu_13.png" alt="Kickstart Configurator" /></p>
+
+<p>Write anything that you need to do after Kickstart installation. It executes the script in <code>chroot</code> environment, so you don’t need to use <code>sudo</code>.</p>
+
+<p>When you are finished with the configuration, press File &gt; Save File in the top menu. Keep default file name as <code class="language-plaintext highlighter-rouge">ks.cfg</code> and save it to your Desktop.</p>
+
+<p>Here are the contents of my <code class="language-plaintext highlighter-rouge">ks.cfg</code> file:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#Generated by Kickstart Configurator
+#platform=x86
+
+#System language
+lang en_US
+#Language modules to install
+langsupport lt_LT --default=en_US
+#System keyboard
+keyboard us
+#System mouse
+mouse
+#System timezone
+timezone Europe/Vilnius
+#Root password
+rootpw --disabled
+#Initial user
+user ernestas --fullname "Ernestas" --iscrypted --password $1$whDie5r9$aK.8Vk1rrF0ZL.WGqAjJE/
+#Reboot after installation
+reboot
+#Use text mode install
+text
+#Install OS instead of upgrade
+install
+#Use CDROM installation media
+cdrom
+#System bootloader configuration
+bootloader --location=mbr
+#Clear the Master Boot Record
+zerombr yes
+#Partition clearing information
+clearpart --all --initlabel
+#Disk partitioning information.
+part /boot --fstype ext4 --size 512
+part / --fstype ext4 --size 26624
+part swap --size 1 --grow
+#System authorization infomation
+auth  --useshadow  --enablemd5
+#Network information
+network --bootproto=dhcp --device=eth0
+#Firewall configuration
+firewall --disabled
+# Do not configure the X Window System
+skipx
+
+# Additional packages to install.
+%packages
+ca-certificates
+openssl
+python
+wget
+tcpd
+openssh-server
+curl
+screen
+vim
+ubuntu-desktop
+gnome
+
+# Add your custom post installation script here. It's not necessary, but you can add something depending on your needs. Here's my script:
+%post
+# Turn on automatic login for user ernestas.
+sed -i '/#  AutomaticLogin/ s/^#  //;s/user1/ernestas/g' /etc/gdm/custom.conf
+
+# Define variables for Gnome settings file.
+settingsDir=/usr/share/glib-2.0/schemas
+settingsFile=gnome-tweaks.gschema.override
+settingsFileWithDir=$settingsDir/$settingsFile
+
+# Create a file for Gnome settings, which will later be compiled in this script.
+touch $settingsFileWithDir
+
+# Enable VNC
+echo "[org.gnome.Vino]" &gt;&gt; $settingsFileWithDir
+echo "authentication-methods=['vnc']" &gt;&gt; $settingsFileWithDir
+echo "enabled=true" &gt;&gt; $settingsFileWithDir
+echo "require-encryption=false" &gt;&gt; $settingsFileWithDir
+echo "prompt-enabled=false" &gt;&gt; $settingsFileWithDir
+echo "vnc-password='bXVjaGhhY2tlcndvdw=='" &gt;&gt; $settingsFileWithDir
+
+# Turn off screen lock
+echo "" &gt;&gt; $settingsFileWithDir
+echo "[org.gnome.desktop.screensaver]" &gt;&gt; $settingsFileWithDir
+echo "lock-enabled=false" &gt;&gt; $settingsFileWithDir
+
+# Turn off screen timeout
+echo "" &gt;&gt; $settingsFileWithDir
+echo "[org.gnome.desktop.session]" &gt;&gt; $settingsFileWithDir
+echo "idle-delay=0" &gt;&gt; $settingsFileWithDir
+
+# Change default favorite applications
+echo "[org.gnome.shell]" &gt;&gt; $settingsFileWithDir
+echo "favorite-apps=['google-chrome.desktop','gnome-terminal.desktop','nautilus.desktop']" &gt;&gt; $settingsFileWithDir
+
+# Compile Gnome settings
+glib-compile-schemas $settingsDir
+
+# Turn on Wake-on-LAN
+ethtool -s eth0 wol g
+
+# Enable shutdown and updates for ernestas without password
+echo "" &gt;&gt; /etc/sudoers
+echo "#Custom rules" &gt;&gt; /etc/sudoers
+echo "ernestas ALL = NOPASSWD: /sbin/shutdown" &gt;&gt; /etc/sudoers
+echo "ernestas ALL = NOPASSWD: /usr/bin/apt-get" &gt;&gt; /etc/sudoers
+
+# Install Google Chrome
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_i386.deb
+dpkg -i google-chrome-stable_current_i386.deb
+
+# Delete Chrome install
+rm google-chrome-stable_current_i386.deb
+
+# Clean
+apt-get -f -y install
+apt-get -y autoremove
+apt-get clean
+</code></pre></div></div>
+
+<h2 id="2-create-preseed-file">2. Create Preseed file</h2>
+<p>Pressed commands work when they are directly written inside the Kickstart file, but I wanted to separate the two methods for you to see clear boundaries between them. Create new file name <code class="language-plaintext highlighter-rouge">ubuntu-auto.seed</code> and include the following contents:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Unmount drives with active partitions. Without this command all the installation process would stop and require confirmation to unmount drives that are already mounted.
+d-i preseed/early_command string umount /media || true
+
+# Don't install recommended items
+d-i preseed base-installer/install-recommends boolean false
+
+# Install only security updates automatically
+d-i preseed pkgsel/update-policy select unattended-upgrades
+</code></pre></div></div>
+
+<p>For additional Preseed configuration options, refer to official Ubuntu installation <a href="https://help.ubuntu.com/lts/installation-guide/i386/apb.html">guide</a>.</p>
+
+<h2 id="3-extract-original-iso-file">3. Extract original ISO file</h2>
+
+<p>Download Ubuntu Server 14.04.3 from <a href="http://www.ubuntu.com/download/server">Ubuntu website</a>. It is necessary to use server version, because desktop version doesn’t support unattended installations. Desktop functionality will work after we install <code class="language-plaintext highlighter-rouge">ubuntu-desktop</code> package in <code class="language-plaintext highlighter-rouge">%packages</code> section.</p>
+
+<p>Mount .iso file to Ubuntu filesystem using Terminal. The command below will mount .iso file to the folder named <em>ubuntu_iso</em> on your desktop.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cd Desktop
+mkdir ubuntu_iso
+sudo mount -o loop ~/Downloads/ubuntu-14.04.3-server-i386.iso ubuntu_iso
+</code></pre></div></div>
+
+<p>Copy .iso contents to another folder on your desktop so we can edit the files. Don’t forget to set the right permissions to be able to make changes.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mkdir ubuntu_files
+sudo rsync -a ubuntu_iso/ ubuntu_files/
+sudo chmod -R 755 ubuntu_files
+sudo chown -R ernestas:ernestas ubuntu_files
+</code></pre></div></div>
+
+<h2 id="4-edit-contents-of-iso">4. Edit contents of ISO</h2>
+<p>Copy <code class="language-plaintext highlighter-rouge">ks.cfg</code> and <code class="language-plaintext highlighter-rouge">ubuntu-auto.seed</code> files to newly created <code class="language-plaintext highlighter-rouge">ubuntu_files</code> folder.</p>
+
+<p>Now we need to make the installer read Kickstart and Preseed files by including new menu selection for automatic Ubuntu installation. To do this, open file named <code class="language-plaintext highlighter-rouge">txt.cfg</code> in <code class="language-plaintext highlighter-rouge">isolinux</code> folder using your favorite text editor and copy this block of text after the line <code class="language-plaintext highlighter-rouge">default install</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>label autoinstall
+  menu label ^Automatically install Ubuntu
+  kernel /install/vmlinuz
+  append file=/cdrom/preseed/ubuntu-server.seed vga=788 initrd=/install/initrd.gz ks=cdrom:/ks.cfg preseed/file=/cdrom/ubuntu-auto.seed quiet --
+</code></pre></div></div>
+
+<p>Turn off language choice menu and specify your desired language:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>echo en &gt;&gt;ubuntu_files/isolinux/lang
+</code></pre></div></div>
+
+<p>You can also use text editor for this. Just create the file named <code class="language-plaintext highlighter-rouge">lang</code> with the contents <code class="language-plaintext highlighter-rouge">en</code> and save it to <code class="language-plaintext highlighter-rouge">isolinux</code> folder.</p>
+
+<h2 id="5-recreate-iso-file-and-make-bootable-usb-media">5. Recreate ISO file and make bootable USB media</h2>
+
+<p>Create new ISO:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ cd ubuntu_files
+$ mkisofs -D -r -V “ubuntu-auto” -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ~/Desktop/ubuntu-auto.iso .
+</code></pre></div></div>
+
+<p>Create bootable USB media using Ubuntu Startup Disk Creator from newly created <code class="language-plaintext highlighter-rouge">ubuntu-auto.iso</code> file :</p>
+
+<p><img src="/assets/images/2016/ubuntu_14.png" alt="Startup Disk Creator" /></p>
+
+<p>After booting into USB, you should see something like this:</p>
+
+<p><img src="/assets/images/2016/ubuntu_1.png" alt="Grub Menu" /></p>
+
+<p>Press Enter and relax! The whole process will be seen as below, but you won’t need to do anything.</p>
+
+<p><img src="/assets/images/2016/ubuntu_15.png" alt="Ubuntu Installation" /></p>
+
+<div class="footnotes" role="doc-endnotes">
+  <ol>
+    <li id="fn:1" role="doc-endnote">
+      <p>Tested using Ubuntu Server 14.04.03 on Ubuntu Desktop 14.04.03. <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+
+  
+    <p>If you liked this article please follow me on <a href="https://twitter.com/narmontase">Twitter</a> for similar content.</p>
+  
+</div>
+
+
+  <section class="comments" id="comment-section">
+  <hr>
+  
+
+  <!-- New comment form -->
+  <div id="respond" class="comment__new">
+    <form class="js-form form" method="post" action="https://ernestas-me-staticman.herokuapp.com/v2/entry/enarmontas/enarmontas.github.io/master/comments">
+  <input type="hidden" name="options[origin]" value="https://ernestas.me/2016/01/21/ubuntu-1404-desktop-unattended-installation">
+  <input type="hidden" name="options[parent]" value="https://ernestas.me/2016/01/21/ubuntu-1404-desktop-unattended-installation">
+  <input type="hidden" id="comment-replying-to-uid" name="fields[replying_to_uid]" value="">
+  <input type="hidden" name="options[slug]" value="ubuntu-1404-desktop-unattended-installation">
+  <input type="hidden" name="options[reCaptcha][siteKey]" value="6LfbfUsaAAAAAGjuUw-KsmEs2JKV8t3KlTQ5LyII">
+  <input type="hidden" name="options[reCaptcha][secret]"  value="scqYdckWe41ee8flMwhE2Uaeyf88VsD2p/Z/qjG4LPkw5WI3U+o2pZ6ga9Lg1Q+E3QYW0ZRSZy0shOc9Z0kPkMRtTvD4pMoUZxEDtKth6MpMTMpivlvvKA6YW5vdkaf3GFR2/iX2yXEksMET5UzpkDYm41O3GU9NH61kaiWGZjHMI20WViXj2Xyb9nqvYRabwLusoLBF+K01eWQB5dXsVYMNH4wV7VWvMhlwS1pjRbNgK349AQ6xzBtKag6PYrvZvVn7LVEgTtcXxPrOgaihpsTMHLtPhfE77ucbg9+MNNIVmBs7TzkdjsW0iLqbzG1nIVpq23y8Q/iU7AbEufQJ1E2SZb7fH5DOKQ6eg6O/ZmFzUURVNAMXh5kCOQJeG0oO7us7b/w7sYFgkkvT5d6x/aYUZ4lhRuntBpo8BHjMrwYgiD8wOlbZW8xoT99BfVdspiu+24KHuFDNv4MqQbDotckF+T9R/mIXkiO6rdE6yrBofoBB3use7l4l1FQ+XJUxmQ0Zr5YVCrhy0QbBxggfeBMo1UxSFsOkmjnRw+4E8mZjWEezIlY85eP4XFn31q7w9nomg8kU+xpYeTnpcTQDcbiRkg/AK8UU3zP33Jh/WvQzUAwRlutQfJs6lXEdgY26MTX56TXej/unDekDlwsHZVMHCK0OjTelAsyHsk0Vqeo=">
+
+  <div class="textfield">
+    <label for="comment-form-message"><h2>Add Comment<small><a rel="nofollow" id="cancel-comment-reply-link" href="https://ernestas.me/2016/01/21/ubuntu-1404-desktop-unattended-installation#respond" style="display:none;">(cancel reply)</a></small></h2>
+      <textarea class="textfield__input" name="fields[message]" type="text" id="comment-form-message" placeholder="Your comment (markdown accepted)" required rows="6"></textarea>
+    </label>
+  </div>
+
+    <div class="textfield narrowfield">
+      <label for="comment-form-name">Name
+        <input class="textfield__input" name="fields[name]" type="text" id="comment-form-name" placeholder="Your name (required)" required/>
+      </label>
+    </div>
+
+    <div class="textfield narrowfield">
+      <label for="comment-form-email">E-mail
+        <input class="textfield__input" name="fields[email]" type="email" id="comment-form-email" placeholder="Your email (optional)"/>
+      </label>
+    </div>
+
+    <div class="textfield narrowfield hp">
+      <label for="hp">
+        <input class="textfield__input" name="fields[hp]" id="hp" type="text" placeholder="Leave blank">
+      </label>
+    </div>
+
+    <div id="reCaptcha" class="g-recaptcha" data-sitekey="6LfbfUsaAAAAAGjuUw-KsmEs2JKV8t3KlTQ5LyII"></div>
+
+    <button class="button" id="comment-form-submit">
+      Submit
+    </button>
+
+</form>
+
+<article class="modal mdl-card mdl-shadow--2dp">
+  <div>
+    <h3 class="modal-title js-modal-title"></h3>
+  </div>
+  <div class="mdl-card__supporting-text js-modal-text"></div>
+  <div class="mdl-card__actions mdl-card--border">
+    <button class="button mdl-button--colored mdl-js-button mdl-js-ripple-effect js-close-modal">Close</button>
+  </div>
+</article>
+
+  </div>
+</section>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="/assets/js/static-comments.js"></script>
+<script src="https://www.google.com/recaptcha/api.js"></script>
+
+
+
+<div class="pagination">
+  
+    <a href="/2016/03/16/using-usb-to-rs232-cable-with-mac-terminal" class="left arrow">&#8592;</a>
+  
+  
+    <a href="/2015/08/01/kodel-parsisiusi-ingress-jo-nekesi-bet-kasdien-zaisi" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+  <span>
+    &copy; <time datetime="2021-07-13 11:03:50 +0000">2021</time> Ernestas Narmontas. Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme.
+  </span>
+</footer>
+
+  </body>
+</html>

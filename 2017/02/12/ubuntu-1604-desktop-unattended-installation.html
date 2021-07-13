@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>Ubuntu 16.04 Desktop Unattended Installation | Ernestas Narmontas</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Ubuntu 16.04 Desktop Unattended Installation" />
+<meta name="author" content="Ernestas Narmontas" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Personal Blog" />
+<meta property="og:description" content="Personal Blog" />
+<link rel="canonical" href="https://ernestas.me/2017/02/12/ubuntu-1604-desktop-unattended-installation" />
+<meta property="og:url" content="https://ernestas.me/2017/02/12/ubuntu-1604-desktop-unattended-installation" />
+<meta property="og:site_name" content="Ernestas Narmontas" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2017-02-12T00:00:00+00:00" />
+<script type="application/ld+json">
+{"description":"Personal Blog","url":"https://ernestas.me/2017/02/12/ubuntu-1604-desktop-unattended-installation","@type":"BlogPosting","author":{"@type":"Person","name":"Ernestas Narmontas"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://ernestas.me/2017/02/12/ubuntu-1604-desktop-unattended-installation"},"headline":"Ubuntu 16.04 Desktop Unattended Installation","dateModified":"2017-02-12T00:00:00+00:00","datePublished":"2017-02-12T00:00:00+00:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+
+  <!-- RSS -->
+  <link type="application/atom+xml" rel="alternate" href="https://ernestas.me/feed.xml" title="Ernestas Narmontas" />
+
+  <!-- Google Analytics-->
+  
+
+    <!-- Google Analytics -->
+    <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-59118080-2', 'auto');
+	ga('send', 'pageview', { 'page': location.pathname + location.search + location.hash});
+	ga('set', 'anonymizeIp', false);
+    </script>
+    <!-- End Google Analytics -->
+    </head>
+
+
+  <body>
+
+    <nav class="nav">
+  <div class="nav-container">
+    <a href="/">
+      <h2 class="nav-title">Ernestas Narmontas</h2>
+    </a>
+    <ul>
+      <li><a href="/">Posts</a></li>
+      <li><a href="/about">About</a></li>
+      <li><a href="https://twitter.com/narmontase">Twitter</a></li>
+    </ul>
+  </div>
+</nav>
+
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    
+    <span>Written by</span>
+    
+        Ernestas Narmontas
+    
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2017-02-12 00:00:00 +0000">February 12, 2017</time>
+    
+  </div>
+
+  <h1 class="post-title">Ubuntu 16.04 Desktop Unattended Installation</h1>
+  <div class="post-line"></div>
+
+  <p><img src="/assets/images/2017/ubuntu_1.jpg" alt="Ubuntu Installation" /></p>
+
+<p>I previously wrote a <a href="/2016/01/21/ubuntu-14.04-desktop-unattended-installation">tutorial</a> on how to automate Ubuntu Desktop 14.04 LTS installation, but for 16.04 it didn’t work because of some differences in installation media.</p>
+
+<p>Here’s a full and tested solution to create your unattended Ubuntu installation media. For me the process on VirtualBox guest took about 30 minutes to fully boot into working system without even touching the keyboard.</p>
+
+<h3 id="1-create-kickstart-file">1. Create Kickstart file</h3>
+<p>Install Kickstart by typing this command into Terminal:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo apt-get install system-config-kickstart
+</code></pre></div></div>
+
+<p>After the installation process is completed, open Kickstart Configurator using Unity search or just by typing <code class="language-plaintext highlighter-rouge">system-config-kickstart</code> in Terminal.</p>
+
+<p>When the Kickstart opens, choose the settings you need for your installation. You can review all possible options on the official Kickstart Configurator <a href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/5/html/installation_guide/ch-redhat-config-kickstart">documentation site</a>.</p>
+
+<p>When you are finished with the configuration, press File &gt; Save File in the top menu. Keep default file name as <code class="language-plaintext highlighter-rouge">ks.cfg</code> and save it to your Desktop. Some of the options doesn’t work in Kickstart configurator, but it can be edited manually after saving <code class="language-plaintext highlighter-rouge">ks.cfg</code>.</p>
+
+<p>Here are the contents of my <code class="language-plaintext highlighter-rouge">ks.cfg</code> file:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#Generated by Kickstart Configurator
+#platform=AMD64 or Intel EM64T
+
+#System language
+lang en_US
+#Language modules to install
+langsupport en_US
+#System keyboard
+keyboard us
+#System mouse
+mouse
+#System timezone
+timezone America/New_York
+#Root password
+rootpw --disabled
+#Initial user
+user ernestas --fullname "Ernestas" --iscrypted --password $1$dLKYoVUI$nb3qZVsrV7IIJMia1kskE0
+#Reboot after installation
+reboot
+#Use text mode install
+text
+#Install OS instead of upgrade
+install
+#Use CDROM installation media
+cdrom
+#System bootloader configuration
+bootloader --location=mbr
+#Clear the Master Boot Record
+zerombr yes
+#Partition clearing information
+clearpart --all --initlabel
+#Disk partitioning information
+part swap --size 2048
+part /boot --fstype ext4 --size 512
+part / --fstype ext4 --size 1 --grow
+#System authorization infomation
+auth  --useshadow  --enablemd5
+#Network information
+network --bootproto=dhcp --device=eth0
+#Firewall configuration
+firewall --disabled
+#Do not configure the X Window System
+skipx
+
+# Additional packages to install
+%packages
+ca-certificates
+openssl
+python
+openssh-server
+vim
+ubuntu-desktop
+unity
+
+# Add your custom post installation script here
+%post
+
+# Add post installation script to /usr/local/bin/ directory
+mkdir /mnt/cdrom
+mount /dev/cdrom /mnt/cdrom
+cp /mnt/cdrom/post.sh /usr/local/bin/
+chown ernestas:ernestas /usr/local/bin/post.sh
+chmod 744 /usr/local/bin/post.sh
+
+# Fix locale
+echo 'LANG="en_US.UTF-8"' &gt; /etc/default/locale
+echo 'LANGUAGE="en_US:en"' &gt;&gt; /etc/default/locale
+echo 'LC_ALL="en_US.UTF-8"' &gt;&gt; /etc/default/locale
+
+# Clean
+apt-get -f -y install
+apt-get -y autoremove
+apt-get clean
+</code></pre></div></div>
+
+<h3 id="2-create-preseed-file">2. Create Preseed file</h3>
+<p>Pressed commands work when they are directly written inside the Kickstart file, but I wanted to separate the two files. Create new file on you desktop named <code class="language-plaintext highlighter-rouge">ubuntu-auto.seed</code> with the following contents:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Unmount drives with active partitions. Without this command all the installation process would stop and require confirmation to unmount drives that are already mounted.
+d-i preseed/early_command string umount /media || true
+
+# Don't install recommended items
+d-i preseed base-installer/install-recommends boolean false
+
+# Install only security updates automatically
+d-i preseed pkgsel/update-policy select unattended-upgrades For additional Preseed configuration options, refer to official Ubuntu [installation guide](https://help.ubuntu.com/lts/installation-guide/armhf/apbs01.html).
+</code></pre></div></div>
+
+<h3 id="3-create-post-installation-script">3. Create post installation script</h3>
+<p>Create a file named <code class="language-plaintext highlighter-rouge">post.sh</code> with your desired commands.</p>
+
+<p>Even if Kickstart has the <code class="language-plaintext highlighter-rouge">%post</code> section, sometimes you may need to make some changes only after the system has fully booted.</p>
+
+<p>My <code class="language-plaintext highlighter-rouge">ks.cfg</code> copies <code class="language-plaintext highlighter-rouge">post.sh</code> file to <code class="language-plaintext highlighter-rouge">/usr/local/bin</code> directory for that. If you don’t want to use the post installation script simply comment out the commands in <code class="language-plaintext highlighter-rouge">ks.cfg</code> after <code class="language-plaintext highlighter-rouge"># Add post installation script...</code> line.</p>
+
+<p>Here is my shortened <code class="language-plaintext highlighter-rouge">post.sh</code> file for example:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#!/bin/bash
+# Set hostname
+read -p "Hostname: " pcHost
+echo "Changing the hostname to $pcHost"
+sed -i "s/ubuntu/$pcHost/g" /etc/hostname
+sed -i "s/ubuntu/$pcHost/g" /etc/hosts
+</code></pre></div></div>
+
+<h3 id="4-extract-original-iso-image">4. Extract original ISO image</h3>
+<p>Download <a href="https://www.ubuntu.com/download/server/thank-you?version=16.04.1&amp;architecture=amd64">Ubuntu Server 16.04 x64</a> from official Ubuntu website and put it on your desktop. It is necessary to use server version, because desktop version doesn’t support unattended installations. Desktop functionality will work after <code class="language-plaintext highlighter-rouge">ubuntu-desktop</code> package in <code class="language-plaintext highlighter-rouge">%packages</code> section of <code class="language-plaintext highlighter-rouge">kb.cfg</code> file is installed.</p>
+
+<p>Mount the <code class="language-plaintext highlighter-rouge">.iso</code> file to Ubuntu filesystem. The commands below will mount <code class="language-plaintext highlighter-rouge">.iso</code> file to the folder named <code class="language-plaintext highlighter-rouge">ubuntu_iso</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cd ~/Desktop
+mkdir ubuntu_iso
+sudo mount -r -o loop ubuntu-16.04.1-server-amd64.iso ubuntu_iso
+</code></pre></div></div>
+
+<p>Copy <code class="language-plaintext highlighter-rouge">.iso</code> contents to another folder on your desktop so we can edit the files. Don’t forget to set the right permissions to be able to make changes.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mkdir ubuntu_files
+rsync -a ubuntu_iso/ ubuntu_files/
+sudo chown ernestas:ernestas ubuntu_files
+sudo chmod 755 ubuntu_files
+sudo umount ubuntu_iso
+rm -rf ubuntu_iso
+</code></pre></div></div>
+
+<h3 id="5-edit-contents-of-iso-image">5. Edit contents of ISO image</h3>
+<p>Copy <code class="language-plaintext highlighter-rouge">ks.cfg</code>, <code class="language-plaintext highlighter-rouge">ubuntu-auto.seed</code> and <code class="language-plaintext highlighter-rouge">post.sh</code> files to newly created <code class="language-plaintext highlighter-rouge">ubuntu_files</code> folder</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cp {ks.cfg,ubuntu-auto.seed,post.sh} ubuntu_files
+chmod 644 ubuntu_files/ks.cfg ubuntu_files/ubuntu-auto.seed
+chmod 744 ubuntu_files/post.sh
+</code></pre></div></div>
+
+<p>Change <code class="language-plaintext highlighter-rouge">isolinux</code> folder and <code class="language-plaintext highlighter-rouge">isolinux/txt.cfg</code> permissions for editing:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>chmod 755 ubuntu_files/isolinux ubuntu_files/isolinux/txt.cfg ubuntu_files/isolinux/isolinux.cfg
+</code></pre></div></div>
+
+<p>Now we need to make the installer read Kickstart and Preseed files by including new menu selection for automatic Ubuntu installation. To do this edit <code class="language-plaintext highlighter-rouge">txt.cfg</code> in <code class="language-plaintext highlighter-rouge">isolinux</code> folder:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nano ubuntu_files/isolinux/txt.cfg
+</code></pre></div></div>
+
+<p>Paste the following content right after the line containing <code class="language-plaintext highlighter-rouge">default install</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>label autoinstall
+  menu label ^Automatically install Ubuntu
+  kernel /install/vmlinuz
+  append file=/cdrom/preseed/ubuntu-server.seed vga=788 initrd=/install/initrd.gz ks=cdrom:/ks.cfg preseed/file=/cdrom/ubuntu-auto.seed quiet --
+</code></pre></div></div>
+
+<p>Set timeout to start the installation automatically:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sed -i -r 's/timeout\s+[0-9]+/timeout 3/g' ubuntu_files/isolinux/isolinux.cfg
+</code></pre></div></div>
+
+<p>Warning! This command will start installation proccess immediately and format the hard drive as defined in <code class="language-plaintext highlighter-rouge">ks.cfg</code>. Skip it if you want to manually start the process after booting into ISO.</p>
+
+<p>Change the permissions back:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>chmod 555 ubuntu_files/isolinux
+chmod 444 ubuntu_files/isolinux/txt.cfg ubuntu_files/isolinux/isolinux.cfg
+</code></pre></div></div>
+
+<h3 id="6-recreate-iso-image">6. Recreate ISO image</h3>
+<p>Create new <code class="language-plaintext highlighter-rouge">.iso</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo mkisofs -D -r -V "ubuntu-auto" -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -input-charset utf-8 -cache-inodes -quiet -o ubuntu-auto.iso ubuntu_files/
+</code></pre></div></div>
+
+<p>Remove files:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo rm -rf ubuntu_files
+</code></pre></div></div>
+
+<h3 id="7-optional--create-bootable-usb-media">7. Optional – Create bootable USB media</h3>
+<p>Make the <code class="language-plaintext highlighter-rouge">.iso</code> file bootable from external USB devices:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo apt-get install syslinux-utils
+sudo isohybrid ubuntu-auto.iso
+</code></pre></div></div>
+
+<p>Plug in USB device and determine the path to it:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>lsblk
+</code></pre></div></div>
+
+<p>My USB device was identified as <code class="language-plaintext highlighter-rouge">/dev/sdb</code>. Unmount the media:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo umount /dev/sdb
+</code></pre></div></div>
+
+<p>Copy ISO to USB device. Make sure to copy directly to the drive, not the first partition (<code class="language-plaintext highlighter-rouge">/dev/sdb</code><del><code class="language-plaintext highlighter-rouge">1</code></del>)</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo dd if=ubuntu-auto.iso of=/dev/sdb bs=4M &amp;&amp; sync
+</code></pre></div></div>
+
+<h3 id="8-known-issues">8. Known Issues</h3>
+<p>8.1. USB doesn’t mount as CD-ROM
+Error message:
+“Your installation CD-ROM couldn’t be mounted. This probably means that the CD-ROM was not in the drive. If so you can insert it and try again.”</p>
+
+<p>Fix: Use dd to create bootable USB. Previuosly this error was caused by Ubuntu Startup Disk Creator.</p>
+
+
+  
+    <p>If you liked this article please follow me on <a href="https://twitter.com/narmontase">Twitter</a> for similar content.</p>
+  
+</div>
+
+
+  <section class="comments" id="comment-section">
+  <hr>
+  
+  <!-- Existing comments -->
+  <div class="comments__existing">
+    <h2>Comments</h2>
+    
+    
+    <!-- List main comments in reverse date order, newest first. List replies in date order, oldest first. -->
+    
+    
+
+<article id="comment-905566e0-c8f9-11eb-8fce-a53dc04a0e01" class="js-comment comment" uid="905566e0-c8f9-11eb-8fce-a53dc04a0e01">
+
+  <div class="comment__author">Samuel,
+    <span class="comment__date"><a href="#comment-905566e0-c8f9-11eb-8fce-a53dc04a0e01" title="Permalink to this comment">June  9th, 2021 08:06</a></span>
+  </div>
+
+  <div class="comment__body">
+    <p>Hello very good work.
+This could work on ubunttu 20.04?
+Thanks</p>
+
+  </div>
+
+
+    <div class="comment__meta">
+      <a rel="nofollow" class="comment__reply-link" onclick="return addComment.moveForm('comment-905566e0-c8f9-11eb-8fce-a53dc04a0e01', 'respond', 'ubuntu-1604-desktop-unattended-installation', '905566e0-c8f9-11eb-8fce-a53dc04a0e01')">↪&#xFE0E; Reply to Samuel</a>
+    </div>
+</article>
+  
+
+<article id="comment-2d381d70-ce06-11eb-af50-69bde5eccbe2" class="js-comment comment child" uid="2d381d70-ce06-11eb-af50-69bde5eccbe2">
+
+  <div class="comment__author">Ernestas,
+    <span class="comment__date"><a href="#comment-2d381d70-ce06-11eb-af50-69bde5eccbe2" title="Permalink to this comment">June 15th, 2021 18:19</a></span>
+  </div>
+
+  <div class="comment__body">
+    <p>Not sure, I have not tried 20.04</p>
+
+  </div>
+
+
+</article>
+
+
+  
+
+  <hr style="border-top: 1px solid #ccc; background: transparent; margin-bottom: 10px;">
+
+
+    
+  </div>
+  
+
+  <!-- New comment form -->
+  <div id="respond" class="comment__new">
+    <form class="js-form form" method="post" action="https://ernestas-me-staticman.herokuapp.com/v2/entry/enarmontas/enarmontas.github.io/master/comments">
+  <input type="hidden" name="options[origin]" value="https://ernestas.me/2017/02/12/ubuntu-1604-desktop-unattended-installation">
+  <input type="hidden" name="options[parent]" value="https://ernestas.me/2017/02/12/ubuntu-1604-desktop-unattended-installation">
+  <input type="hidden" id="comment-replying-to-uid" name="fields[replying_to_uid]" value="">
+  <input type="hidden" name="options[slug]" value="ubuntu-1604-desktop-unattended-installation">
+  <input type="hidden" name="options[reCaptcha][siteKey]" value="6LfbfUsaAAAAAGjuUw-KsmEs2JKV8t3KlTQ5LyII">
+  <input type="hidden" name="options[reCaptcha][secret]"  value="scqYdckWe41ee8flMwhE2Uaeyf88VsD2p/Z/qjG4LPkw5WI3U+o2pZ6ga9Lg1Q+E3QYW0ZRSZy0shOc9Z0kPkMRtTvD4pMoUZxEDtKth6MpMTMpivlvvKA6YW5vdkaf3GFR2/iX2yXEksMET5UzpkDYm41O3GU9NH61kaiWGZjHMI20WViXj2Xyb9nqvYRabwLusoLBF+K01eWQB5dXsVYMNH4wV7VWvMhlwS1pjRbNgK349AQ6xzBtKag6PYrvZvVn7LVEgTtcXxPrOgaihpsTMHLtPhfE77ucbg9+MNNIVmBs7TzkdjsW0iLqbzG1nIVpq23y8Q/iU7AbEufQJ1E2SZb7fH5DOKQ6eg6O/ZmFzUURVNAMXh5kCOQJeG0oO7us7b/w7sYFgkkvT5d6x/aYUZ4lhRuntBpo8BHjMrwYgiD8wOlbZW8xoT99BfVdspiu+24KHuFDNv4MqQbDotckF+T9R/mIXkiO6rdE6yrBofoBB3use7l4l1FQ+XJUxmQ0Zr5YVCrhy0QbBxggfeBMo1UxSFsOkmjnRw+4E8mZjWEezIlY85eP4XFn31q7w9nomg8kU+xpYeTnpcTQDcbiRkg/AK8UU3zP33Jh/WvQzUAwRlutQfJs6lXEdgY26MTX56TXej/unDekDlwsHZVMHCK0OjTelAsyHsk0Vqeo=">
+
+  <div class="textfield">
+    <label for="comment-form-message"><h2>Add Comment<small><a rel="nofollow" id="cancel-comment-reply-link" href="https://ernestas.me/2017/02/12/ubuntu-1604-desktop-unattended-installation#respond" style="display:none;">(cancel reply)</a></small></h2>
+      <textarea class="textfield__input" name="fields[message]" type="text" id="comment-form-message" placeholder="Your comment (markdown accepted)" required rows="6"></textarea>
+    </label>
+  </div>
+
+    <div class="textfield narrowfield">
+      <label for="comment-form-name">Name
+        <input class="textfield__input" name="fields[name]" type="text" id="comment-form-name" placeholder="Your name (required)" required/>
+      </label>
+    </div>
+
+    <div class="textfield narrowfield">
+      <label for="comment-form-email">E-mail
+        <input class="textfield__input" name="fields[email]" type="email" id="comment-form-email" placeholder="Your email (optional)"/>
+      </label>
+    </div>
+
+    <div class="textfield narrowfield hp">
+      <label for="hp">
+        <input class="textfield__input" name="fields[hp]" id="hp" type="text" placeholder="Leave blank">
+      </label>
+    </div>
+
+    <div id="reCaptcha" class="g-recaptcha" data-sitekey="6LfbfUsaAAAAAGjuUw-KsmEs2JKV8t3KlTQ5LyII"></div>
+
+    <button class="button" id="comment-form-submit">
+      Submit
+    </button>
+
+</form>
+
+<article class="modal mdl-card mdl-shadow--2dp">
+  <div>
+    <h3 class="modal-title js-modal-title"></h3>
+  </div>
+  <div class="mdl-card__supporting-text js-modal-text"></div>
+  <div class="mdl-card__actions mdl-card--border">
+    <button class="button mdl-button--colored mdl-js-button mdl-js-ripple-effect js-close-modal">Close</button>
+  </div>
+</article>
+
+  </div>
+</section>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="/assets/js/static-comments.js"></script>
+<script src="https://www.google.com/recaptcha/api.js"></script>
+
+
+
+<div class="pagination">
+  
+    <a href="/2017/11/21/upgrading-hp-aruba-switch-firmware" class="left arrow">&#8592;</a>
+  
+  
+    <a href="/2016/03/16/using-usb-to-rs232-cable-with-mac-terminal" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+  <span>
+    &copy; <time datetime="2021-07-13 11:03:50 +0000">2021</time> Ernestas Narmontas. Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme.
+  </span>
+</footer>
+
+  </body>
+</html>
